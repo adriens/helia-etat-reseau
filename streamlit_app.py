@@ -1,7 +1,4 @@
 """Dashboard Streamlit — Helia NC maintenances."""
-import json
-import os
-from datetime import datetime, timezone
 
 import pandas as pd
 import streamlit as st
@@ -27,16 +24,29 @@ if not DB_PATH.exists():
 with st.sidebar:
     st.header("Filtres")
     commune_filter = st.text_input("Commune", placeholder="ex: NOUMEA").upper().strip() or None
-    province_filter = st.selectbox(
-        "Province",
-        ["", "PROVINCE_SUD", "PROVINCE_NORD", "ILES_LOYAUTE"],
-        format_func=lambda x: x or "Toutes",
-    ) or None
-    service_filter = st.selectbox(
-        "Service",
-        ["", "TELEPHONIE_FIXE", "TELEPHONIE_MOBILE", "INTERNET_FIXE", "INTERNET_MOBILE", "TELEVISION"],
-        format_func=lambda x: x.replace("_", " ") if x else "Tous",
-    ) or None
+    province_filter = (
+        st.selectbox(
+            "Province",
+            ["", "PROVINCE_SUD", "PROVINCE_NORD", "ILES_LOYAUTE"],
+            format_func=lambda x: x or "Toutes",
+        )
+        or None
+    )
+    service_filter = (
+        st.selectbox(
+            "Service",
+            [
+                "",
+                "TELEPHONIE_FIXE",
+                "TELEPHONIE_MOBILE",
+                "INTERNET_FIXE",
+                "INTERNET_MOBILE",
+                "TELEVISION",
+            ],
+            format_func=lambda x: x.replace("_", " ") if x else "Tous",
+        )
+        or None
+    )
 
     st.divider()
     st.header("Scrapes récents")
@@ -57,7 +67,9 @@ maintenances = get_latest_maintenances(
 )
 
 if not maintenances:
-    st.info("Aucune maintenance trouvée avec ces filtres. La base est peut-être vide — attendez le prochain scrape.")
+    st.info(
+        "Aucune maintenance trouvée avec ces filtres. La base est peut-être vide — attendez le prochain scrape."
+    )
     st.stop()
 
 # KPIs
@@ -74,17 +86,19 @@ st.divider()
 # Table
 rows = []
 for m in maintenances:
-    rows.append({
-        "ID": m["id"],
-        "Début": m["timestamp_debut"][:16].replace("T", " "),
-        "Fin": m["timestamp_fin"][:16].replace("T", " "),
-        "Durée (min)": m["duree_fenetre_minutes"],
-        "Communes": ", ".join(m["communes_concernees"]),
-        "Services": ", ".join(s.replace("_", " ") for s in m["services"]),
-        "Impact": m["impact"].replace("_", " "),
-        "Provinces": ", ".join(m["provinces_concernees"]),
-        "Toute NC": "✓" if m["est_toute_nc"] else "",
-    })
+    rows.append(
+        {
+            "ID": m["id"],
+            "Début": m["timestamp_debut"][:16].replace("T", " "),
+            "Fin": m["timestamp_fin"][:16].replace("T", " "),
+            "Durée (min)": m["duree_fenetre_minutes"],
+            "Communes": ", ".join(m["communes_concernees"]),
+            "Services": ", ".join(s.replace("_", " ") for s in m["services"]),
+            "Impact": m["impact"].replace("_", " "),
+            "Provinces": ", ".join(m["provinces_concernees"]),
+            "Toute NC": "✓" if m["est_toute_nc"] else "",
+        }
+    )
 
 df = pd.DataFrame(rows)
 
@@ -103,14 +117,12 @@ with col_a:
 
 with col_b:
     st.subheader("Par service")
-    service_counts = pd.Series(
-        [s for m in maintenances for s in m["services"]]
-    ).value_counts()
+    service_counts = pd.Series([s for m in maintenances for s in m["services"]]).value_counts()
     st.bar_chart(service_counts)
 
 # Commune coverage
 st.subheader("Communes les plus impactées")
-commune_counts = pd.Series(
-    [c for m in maintenances for c in m["communes_concernees"]]
-).value_counts().head(15)
+commune_counts = (
+    pd.Series([c for m in maintenances for c in m["communes_concernees"]]).value_counts().head(15)
+)
 st.bar_chart(commune_counts)

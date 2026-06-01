@@ -11,6 +11,7 @@ Compatibilité :
   - Prometheus via OTLP receiver
   - Jaeger, Zipkin, etc.
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,10 +26,10 @@ def setup_telemetry(app) -> None:
         return
 
     from opentelemetry import trace
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.sdk.resources import Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
     service_name = os.environ.get("OTEL_SERVICE_NAME", "helia-nc-api")
     endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
@@ -39,9 +40,11 @@ def setup_telemetry(app) -> None:
 
     if protocol == "grpc":
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
         exporter = OTLPSpanExporter(endpoint=endpoint)
     else:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
         exporter = OTLPSpanExporter(endpoint=endpoint)
 
     provider.add_span_processor(BatchSpanProcessor(exporter))

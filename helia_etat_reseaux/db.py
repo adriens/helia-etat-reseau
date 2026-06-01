@@ -1,20 +1,19 @@
 """Couche SQLite — persistance et archivage des maintenances Helia NC."""
+
 from __future__ import annotations
 
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-DB_PATH = Path(
-    __import__("os").environ.get("HELIA_DB_PATH", "/data/helia.db")
-)
+DB_PATH = Path(__import__("os").environ.get("HELIA_DB_PATH", "/data/helia.db"))
 
 
 def _conn(path: Path = DB_PATH, *, readonly: bool = False) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    uri = f"file:{path}{'?mode=ro' if readonly else ''}";
+    uri = f"file:{path}{'?mode=ro' if readonly else ''}"
     conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -71,7 +70,7 @@ def init_db() -> None:
 
 def upsert_run(maintenances: list, scraped_at: str | None = None, error: str | None = None) -> int:
     """Insère un scrape run et les maintenances associées. Retourne le run_id."""
-    ts = scraped_at or datetime.now(timezone.utc).isoformat()
+    ts = scraped_at or datetime.now(UTC).isoformat()
     status = "error" if error else "ok"
     with get_db() as conn:
         cur = conn.execute(
@@ -103,7 +102,9 @@ def upsert_run(maintenances: list, scraped_at: str | None = None, error: str | N
                     "impact": m["impact"],
                     "nb_communes_concernees": m["nb_communes_concernees"],
                     "est_toute_nc": int(m["est_toute_nc"]),
-                    "provinces_concernees": json.dumps(m["provinces_concernees"], ensure_ascii=False),
+                    "provinces_concernees": json.dumps(
+                        m["provinces_concernees"], ensure_ascii=False
+                    ),
                     "run_id": run_id,
                 }
                 for m in maintenances

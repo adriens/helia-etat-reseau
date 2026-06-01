@@ -1,7 +1,9 @@
 """MCP server exposant les maintenances Helia NC comme outils."""
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
+
 from helia_etat_reseaux import scrape_maintenances
 from helia_etat_reseaux.geo import communes_within_radius
 

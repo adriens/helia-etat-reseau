@@ -38,4 +38,5 @@ def health() -> HealthResponse:
 )
 def cache_stats_endpoint() -> CacheStats:
     from api.cache import stats
+
     return CacheStats(**stats())

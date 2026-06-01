@@ -1,9 +1,11 @@
 import os
 
 from fastapi import APIRouter, HTTPException, Path, Query
+
+from api.cache import get as cache_get
+from api.cache import set as cache_set
 from helia_etat_reseaux import Maintenance, Province, Service, scrape_maintenances
 from helia_etat_reseaux.geo import communes_within_radius
-from api.cache import get as cache_get, set as cache_set, stats as cache_stats
 
 router = APIRouter(prefix="/maintenances", tags=["maintenances"])
 
@@ -26,6 +28,7 @@ def _fetch(
 ) -> list[dict]:
     if _USE_DB:
         from helia_etat_reseaux.db import get_latest_maintenances
+
         return get_latest_maintenances(
             commune=commune,
             province=province.value if province else None,
@@ -34,7 +37,7 @@ def _fetch(
     try:
         items = scrape_maintenances()
     except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc))
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     result = [m.model_dump(mode="json") for m in items]
     if commune:
         c = commune.upper()
@@ -63,11 +66,11 @@ def get_maintenances(
         default=None,
         description="Filtre sur le nom officiel d'une commune (ex: `NOUMEA`). Insensible à la casse.",
     ),
-    province: Province | None = Query(
+    province: Province | None = Query(  # noqa: B008
         default=None,
         description="Filtre sur une province administrative NC.",
     ),
-    service: Service | None = Query(
+    service: Service | None = Query(  # noqa: B008
         default=None,
         description="Filtre sur un service télécom impacté.",
     ),
@@ -129,6 +132,7 @@ def get_maintenance_by_id(
 
     if _USE_DB:
         from helia_etat_reseaux.db import get_maintenance_by_id_db
+
         m = get_maintenance_by_id_db(id)
         if m:
             result = Maintenance.model_validate(m)

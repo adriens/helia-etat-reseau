@@ -3,11 +3,12 @@
 Intervalle contrôlé par la variable d'environnement HELIA_SCRAPE_INTERVAL_MINUTES
 (défaut : 15). Minimum autorisé : 5 minutes.
 """
+
 from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -24,7 +25,7 @@ _MIN_INTERVAL = 5
 
 
 def _scrape_job() -> None:
-    ts = datetime.now(timezone.utc).isoformat()
+    ts = datetime.now(UTC).isoformat()
     try:
         items = [m.model_dump(mode="json") for m in scrape_maintenances()]
         run_id = upsert_run(items, scraped_at=ts)
@@ -36,7 +37,9 @@ def _scrape_job() -> None:
 
 def start_scheduler(interval_minutes: int | None = None) -> AsyncIOScheduler:
     global _scheduler
-    minutes = max(_MIN_INTERVAL, interval_minutes if interval_minutes is not None else _DEFAULT_INTERVAL)
+    minutes = max(
+        _MIN_INTERVAL, interval_minutes if interval_minutes is not None else _DEFAULT_INTERVAL
+    )
     init_db()
     # Run immediately on startup
     _scrape_job()

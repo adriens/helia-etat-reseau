@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -8,59 +8,74 @@ from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
 
-class Province(str, Enum):
+class Province(StrEnum):
     """Province administrative de Nouvelle-Calédonie."""
 
-    PROVINCE_SUD  = "PROVINCE_SUD"
+    PROVINCE_SUD = "PROVINCE_SUD"
     PROVINCE_NORD = "PROVINCE_NORD"
-    ILES_LOYAUTE  = "ILES_LOYAUTE"
+    ILES_LOYAUTE = "ILES_LOYAUTE"
 
     @classmethod
     def __get_pydantic_json_schema__(cls, schema: CoreSchema, handler: Any) -> JsonSchemaValue:
         js = handler(schema)
         js["description"] = "Province administrative NC."
         js["x-enumDescriptions"] = {
-            "PROVINCE_SUD":  "Province Sud (Nouméa, Grand Nouméa, intérieur sud)",
+            "PROVINCE_SUD": "Province Sud (Nouméa, Grand Nouméa, intérieur sud)",
             "PROVINCE_NORD": "Province Nord (côte ouest et est, extrême nord)",
-            "ILES_LOYAUTE":  "Province des Îles Loyauté (Lifou, Maré, Ouvéa)",
+            "ILES_LOYAUTE": "Province des Îles Loyauté (Lifou, Maré, Ouvéa)",
         }
         return js
 
 
 COMMUNES_PAR_PROVINCE: dict[str, Province] = {
     # Province Sud
-    "BOULOUPARIS": Province.PROVINCE_SUD, "BOURAIL": Province.PROVINCE_SUD,
-    "DUMBEA": Province.PROVINCE_SUD,      "FARINO": Province.PROVINCE_SUD,
-    "ILE DES PINS": Province.PROVINCE_SUD, "LA FOA": Province.PROVINCE_SUD,
-    "MOINDOU": Province.PROVINCE_SUD,     "MONT-DORE": Province.PROVINCE_SUD,
-    "NOUMEA": Province.PROVINCE_SUD,      "PAITA": Province.PROVINCE_SUD,
-    "SARRAMEA": Province.PROVINCE_SUD,    "THIO": Province.PROVINCE_SUD,
+    "BOULOUPARIS": Province.PROVINCE_SUD,
+    "BOURAIL": Province.PROVINCE_SUD,
+    "DUMBEA": Province.PROVINCE_SUD,
+    "FARINO": Province.PROVINCE_SUD,
+    "ILE DES PINS": Province.PROVINCE_SUD,
+    "LA FOA": Province.PROVINCE_SUD,
+    "MOINDOU": Province.PROVINCE_SUD,
+    "MONT-DORE": Province.PROVINCE_SUD,
+    "NOUMEA": Province.PROVINCE_SUD,
+    "PAITA": Province.PROVINCE_SUD,
+    "SARRAMEA": Province.PROVINCE_SUD,
+    "THIO": Province.PROVINCE_SUD,
     "YATE": Province.PROVINCE_SUD,
     # Province Nord
-    "BELEP": Province.PROVINCE_NORD,      "CANALA": Province.PROVINCE_NORD,
-    "HIENGHENE": Province.PROVINCE_NORD,  "HOUAILOU": Province.PROVINCE_NORD,
-    "KAALA-GOMEN": Province.PROVINCE_NORD, "KONE": Province.PROVINCE_NORD,
-    "KOUAOUA": Province.PROVINCE_NORD,    "KOUMAC": Province.PROVINCE_NORD,
-    "OUEGOA": Province.PROVINCE_NORD,     "POINDIMIE": Province.PROVINCE_NORD,
-    "PONERIHOUEN": Province.PROVINCE_NORD, "POUEBO": Province.PROVINCE_NORD,
-    "POUEMBOUT": Province.PROVINCE_NORD,  "POUM": Province.PROVINCE_NORD,
-    "POYA": Province.PROVINCE_NORD,       "TOUHO": Province.PROVINCE_NORD,
+    "BELEP": Province.PROVINCE_NORD,
+    "CANALA": Province.PROVINCE_NORD,
+    "HIENGHENE": Province.PROVINCE_NORD,
+    "HOUAILOU": Province.PROVINCE_NORD,
+    "KAALA-GOMEN": Province.PROVINCE_NORD,
+    "KONE": Province.PROVINCE_NORD,
+    "KOUAOUA": Province.PROVINCE_NORD,
+    "KOUMAC": Province.PROVINCE_NORD,
+    "OUEGOA": Province.PROVINCE_NORD,
+    "POINDIMIE": Province.PROVINCE_NORD,
+    "PONERIHOUEN": Province.PROVINCE_NORD,
+    "POUEBO": Province.PROVINCE_NORD,
+    "POUEMBOUT": Province.PROVINCE_NORD,
+    "POUM": Province.PROVINCE_NORD,
+    "POYA": Province.PROVINCE_NORD,
+    "TOUHO": Province.PROVINCE_NORD,
     "VOH": Province.PROVINCE_NORD,
     # Îles Loyauté
-    "LIFOU": Province.ILES_LOYAUTE,       "MARE": Province.ILES_LOYAUTE,
+    "LIFOU": Province.ILES_LOYAUTE,
+    "MARE": Province.ILES_LOYAUTE,
     "OUVEA": Province.ILES_LOYAUTE,
 }
 
 
-class Service(str, Enum):
+class Service(StrEnum):
     """Services télécoms pouvant être impactés lors d'une maintenance."""
 
-    TELEPHONIE_FIXE           = "TELEPHONIE_FIXE"
-    TELEPHONIE_MOBILE         = "TELEPHONIE_MOBILE"
-    INTERNET_FIXE             = "INTERNET_FIXE"
-    INTERNET_MOBILE           = "INTERNET_MOBILE"
-    FIBRE_OPTIQUE             = "FIBRE_OPTIQUE"
-    RESEAU_CUIVRE             = "RESEAU_CUIVRE"
+    TELEPHONIE_FIXE = "TELEPHONIE_FIXE"
+    TELEPHONIE_MOBILE = "TELEPHONIE_MOBILE"
+    INTERNET_FIXE = "INTERNET_FIXE"
+    INTERNET_MOBILE = "INTERNET_MOBILE"
+    FIBRE_OPTIQUE = "FIBRE_OPTIQUE"
+    RESEAU_CUIVRE = "RESEAU_CUIVRE"
     LIAISONS_CELERIS_ETHERNET = "LIAISONS_CELERIS_ETHERNET"
 
     @classmethod
@@ -68,23 +83,23 @@ class Service(str, Enum):
         js = handler(schema)
         js["description"] = "Service télécom impacté par la maintenance."
         js["x-enumDescriptions"] = {
-            "TELEPHONIE_FIXE":           "Téléphonie fixe (RTC / VoIP fixe)",
-            "TELEPHONIE_MOBILE":         "Téléphonie mobile (voix)",
-            "INTERNET_FIXE":             "Accès Internet fixe (ADSL, fibre, cuivre)",
-            "INTERNET_MOBILE":           "Accès Internet mobile (4G/5G)",
-            "FIBRE_OPTIQUE":             "Réseau fibre optique",
-            "RESEAU_CUIVRE":             "Réseau cuivre (paires téléphoniques)",
+            "TELEPHONIE_FIXE": "Téléphonie fixe (RTC / VoIP fixe)",
+            "TELEPHONIE_MOBILE": "Téléphonie mobile (voix)",
+            "INTERNET_FIXE": "Accès Internet fixe (ADSL, fibre, cuivre)",
+            "INTERNET_MOBILE": "Accès Internet mobile (4G/5G)",
+            "FIBRE_OPTIQUE": "Réseau fibre optique",
+            "RESEAU_CUIVRE": "Réseau cuivre (paires téléphoniques)",
             "LIAISONS_CELERIS_ETHERNET": "Liaisons Ethernet dédiées Céléris (offres entreprises)",
         }
         return js
 
 
-class Impact(str, Enum):
+class Impact(StrEnum):
     """Sévérité estimée de la coupure effective pour les utilisateurs."""
 
     COUPURE_20_30_MIN = "COUPURE_20_30_MIN"
-    COUPURE_30_MIN    = "COUPURE_30_MIN"
-    A_DETERMINER      = "A_DETERMINER"
+    COUPURE_30_MIN = "COUPURE_30_MIN"
+    A_DETERMINER = "A_DETERMINER"
 
     @classmethod
     def __get_pydantic_json_schema__(cls, schema: CoreSchema, handler: Any) -> JsonSchemaValue:
@@ -92,20 +107,49 @@ class Impact(str, Enum):
         js["description"] = "Sévérité de l'impact sur les utilisateurs finals."
         js["x-enumDescriptions"] = {
             "COUPURE_20_30_MIN": "Coupure effective estimée entre 20 et 30 minutes",
-            "COUPURE_30_MIN":    "Coupure effective estimée à 30 minutes",
-            "A_DETERMINER":      "Durée d'impact non encore déterminée",
+            "COUPURE_30_MIN": "Coupure effective estimée à 30 minutes",
+            "A_DETERMINER": "Durée d'impact non encore déterminée",
         }
         return js
 
 
-COMMUNES_OFFICIELLES = frozenset([
-    "BELEP", "BOULOUPARIS", "BOURAIL", "CANALA", "DUMBEA", "FARINO",
-    "HIENGHENE", "HOUAILOU", "ILE DES PINS", "KAALA-GOMEN", "KONE",
-    "KOUAOUA", "KOUMAC", "LA FOA", "LIFOU", "MARE", "MOINDOU",
-    "MONT-DORE", "NOUMEA", "OUEGOA", "OUVEA", "PAITA", "POINDIMIE",
-    "PONERIHOUEN", "POUEBO", "POUEMBOUT", "POUM", "POYA", "SARRAMEA",
-    "THIO", "TOUHO", "VOH", "YATE",
-])
+COMMUNES_OFFICIELLES = frozenset(
+    [
+        "BELEP",
+        "BOULOUPARIS",
+        "BOURAIL",
+        "CANALA",
+        "DUMBEA",
+        "FARINO",
+        "HIENGHENE",
+        "HOUAILOU",
+        "ILE DES PINS",
+        "KAALA-GOMEN",
+        "KONE",
+        "KOUAOUA",
+        "KOUMAC",
+        "LA FOA",
+        "LIFOU",
+        "MARE",
+        "MOINDOU",
+        "MONT-DORE",
+        "NOUMEA",
+        "OUEGOA",
+        "OUVEA",
+        "PAITA",
+        "POINDIMIE",
+        "PONERIHOUEN",
+        "POUEBO",
+        "POUEMBOUT",
+        "POUM",
+        "POYA",
+        "SARRAMEA",
+        "THIO",
+        "TOUHO",
+        "VOH",
+        "YATE",
+    ]
+)
 
 
 class Maintenance(BaseModel):
@@ -134,86 +178,128 @@ class Maintenance(BaseModel):
         }
     }
 
-    id: Annotated[str, Field(
-        pattern=r"^[0-9a-f]{8}$",
-        description=(
-            "Identifiant SHA256 tronqué à 8 caractères hexadécimaux, "
-            "calculé à partir de `timestamp_debut`, `timestamp_fin`, `services` (triés) "
-            "et `communes_concernees` (triées). "
-            "**Stable entre deux scrapes** si la maintenance n'a pas changé : "
-            "permet l'idempotence dans Kafka et l'upsert dans OpenSearch (`_id`)."
+    id: Annotated[
+        str,
+        Field(
+            pattern=r"^[0-9a-f]{8}$",
+            description=(
+                "Identifiant SHA256 tronqué à 8 caractères hexadécimaux, "
+                "calculé à partir de `timestamp_debut`, `timestamp_fin`, `services` (triés) "
+                "et `communes_concernees` (triées). "
+                "**Stable entre deux scrapes** si la maintenance n'a pas changé : "
+                "permet l'idempotence dans Kafka et l'upsert dans OpenSearch (`_id`)."
+            ),
         ),
-    )]
-    scraped_at: Annotated[str, Field(
-        description="Horodatage UTC du scrape, au format `YYYY-MM-DDTHH:MM:SSZ`.",
-    )]
-    source_url: Annotated[str, Field(
-        description="URL de la page source scrapée.",
-    )]
-    timestamp_debut: Annotated[str, Field(
-        description=(
-            "Début de la fenêtre de maintenance au format ISO 8601, "
-            "heure locale Nouvelle-Calédonie **UTC+11** (pas de changement d'heure). "
-            "Exemple : `2026-06-01T23:00:00+11:00`."
+    ]
+    scraped_at: Annotated[
+        str,
+        Field(
+            description="Horodatage UTC du scrape, au format `YYYY-MM-DDTHH:MM:SSZ`.",
         ),
-    )]
-    timestamp_fin: Annotated[str, Field(
-        description=(
-            "Fin de la fenêtre de maintenance au format ISO 8601, "
-            "heure locale Nouvelle-Calédonie **UTC+11**. "
-            "Peut tomber le lendemain pour les fenêtres nocturnes (ex: 23h→5h)."
+    ]
+    source_url: Annotated[
+        str,
+        Field(
+            description="URL de la page source scrapée.",
         ),
-    )]
-    duree_fenetre_minutes: Annotated[int, Field(
-        gt=0,
-        description=(
-            "Durée totale de la fenêtre de maintenance en minutes, "
-            "calculée comme `timestamp_fin − timestamp_debut`. "
-            "Distinct de la durée de coupure effective."
+    ]
+    timestamp_debut: Annotated[
+        str,
+        Field(
+            description=(
+                "Début de la fenêtre de maintenance au format ISO 8601, "
+                "heure locale Nouvelle-Calédonie **UTC+11** (pas de changement d'heure). "
+                "Exemple : `2026-06-01T23:00:00+11:00`."
+            ),
         ),
-    )]
-    duree_coupure_min_minutes: Annotated[int | None, Field(
-        description=(
-            "Durée **minimale** estimée de la coupure effective en minutes. "
-            "`null` si `impact` vaut `A_DETERMINER`."
+    ]
+    timestamp_fin: Annotated[
+        str,
+        Field(
+            description=(
+                "Fin de la fenêtre de maintenance au format ISO 8601, "
+                "heure locale Nouvelle-Calédonie **UTC+11**. "
+                "Peut tomber le lendemain pour les fenêtres nocturnes (ex: 23h→5h)."
+            ),
         ),
-    )]
-    duree_coupure_max_minutes: Annotated[int | None, Field(
-        description=(
-            "Durée **maximale** estimée de la coupure effective en minutes. "
-            "`null` si `impact` vaut `A_DETERMINER`."
+    ]
+    duree_fenetre_minutes: Annotated[
+        int,
+        Field(
+            gt=0,
+            description=(
+                "Durée totale de la fenêtre de maintenance en minutes, "
+                "calculée comme `timestamp_fin − timestamp_debut`. "
+                "Distinct de la durée de coupure effective."
+            ),
         ),
-    )]
-    communes_concernees: Annotated[list[str], Field(
-        min_length=1,
-        description=(
-            "Liste des communes officielles NC affectées, en majuscules. "
-            "Normalisées selon le référentiel "
-            "[communes-nc-limites-terrestres-simplifiees](https://data.gouv.nc/explore/dataset/communes-nc-limites-terrestres-simplifiees/) "
-            "de data.gouv.nc — jointure directe possible sur le champ `nom`."
+    ]
+    duree_coupure_min_minutes: Annotated[
+        int | None,
+        Field(
+            description=(
+                "Durée **minimale** estimée de la coupure effective en minutes. "
+                "`null` si `impact` vaut `A_DETERMINER`."
+            ),
         ),
-    )]
-    services: Annotated[list[Service], Field(
-        min_length=1,
-        description="Liste des services télécoms impactés par cette maintenance.",
-    )]
-    impact: Annotated[Impact, Field(
-        description="Sévérité estimée de la coupure effective pour les abonnés.",
-    )]
-    nb_communes_concernees: Annotated[int, Field(
-        gt=0,
-        description="Nombre de communes officielles affectées. Pratique pour agréger l'étendue géographique.",
-    )]
-    est_toute_nc: Annotated[bool, Field(
-        description="`true` si les 33 communes de Nouvelle-Calédonie sont toutes concernées.",
-    )]
-    provinces_concernees: Annotated[list[Province], Field(
-        min_length=1,
-        description=(
-            "Provinces administratives NC concernées, dérivées de `communes_concernees`. "
-            "Utile pour filtrer par grande zone géographique."
+    ]
+    duree_coupure_max_minutes: Annotated[
+        int | None,
+        Field(
+            description=(
+                "Durée **maximale** estimée de la coupure effective en minutes. "
+                "`null` si `impact` vaut `A_DETERMINER`."
+            ),
         ),
-    )]
+    ]
+    communes_concernees: Annotated[
+        list[str],
+        Field(
+            min_length=1,
+            description=(
+                "Liste des communes officielles NC affectées, en majuscules. "
+                "Normalisées selon le référentiel "
+                "[communes-nc-limites-terrestres-simplifiees](https://data.gouv.nc/explore/dataset/communes-nc-limites-terrestres-simplifiees/) "
+                "de data.gouv.nc — jointure directe possible sur le champ `nom`."
+            ),
+        ),
+    ]
+    services: Annotated[
+        list[Service],
+        Field(
+            min_length=1,
+            description="Liste des services télécoms impactés par cette maintenance.",
+        ),
+    ]
+    impact: Annotated[
+        Impact,
+        Field(
+            description="Sévérité estimée de la coupure effective pour les abonnés.",
+        ),
+    ]
+    nb_communes_concernees: Annotated[
+        int,
+        Field(
+            gt=0,
+            description="Nombre de communes officielles affectées. Pratique pour agréger l'étendue géographique.",
+        ),
+    ]
+    est_toute_nc: Annotated[
+        bool,
+        Field(
+            description="`true` si les 33 communes de Nouvelle-Calédonie sont toutes concernées.",
+        ),
+    ]
+    provinces_concernees: Annotated[
+        list[Province],
+        Field(
+            min_length=1,
+            description=(
+                "Provinces administratives NC concernées, dérivées de `communes_concernees`. "
+                "Utile pour filtrer par grande zone géographique."
+            ),
+        ),
+    ]
 
     @field_validator("communes_concernees")
     @classmethod
@@ -227,7 +313,9 @@ class Maintenance(BaseModel):
     def duree_coupure_coherence(self) -> Maintenance:
         mn, mx = self.duree_coupure_min_minutes, self.duree_coupure_max_minutes
         if (mn is None) != (mx is None):
-            raise ValueError("duree_coupure_min et max doivent être tous les deux None ou renseignés")
+            raise ValueError(
+                "duree_coupure_min et max doivent être tous les deux None ou renseignés"
+            )
         if mn is not None and mx is not None and mn > mx:
             raise ValueError(f"duree_coupure_min ({mn}) > duree_coupure_max ({mx})")
         if self.impact == Impact.A_DETERMINER and mn is not None:

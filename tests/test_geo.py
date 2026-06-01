@@ -1,4 +1,5 @@
 """Tests unitaires — geo.py."""
+
 from helia_etat_reseaux.geo import COMMUNE_CENTROIDS, communes_within_radius, haversine_km
 
 
@@ -16,7 +17,9 @@ class TestHaversine:
     def test_symmetry(self):
         lat1, lon1 = COMMUNE_CENTROIDS["NOUMEA"]
         lat2, lon2 = COMMUNE_CENTROIDS["LIFOU"]
-        assert abs(haversine_km(lat1, lon1, lat2, lon2) - haversine_km(lat2, lon2, lat1, lon1)) < 1e-6
+        assert (
+            abs(haversine_km(lat1, lon1, lat2, lon2) - haversine_km(lat2, lon2, lat1, lon1)) < 1e-6
+        )
 
 
 class TestCommunesWithinRadius:

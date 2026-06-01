@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from helia_etat_reseaux.mcp import mcp
 from prometheus_fastapi_instrumentator import Instrumentator
+
+from helia_etat_reseaux.mcp import mcp
 
 from .routes import health, maintenances
 from .telemetry import setup_telemetry
@@ -52,6 +53,7 @@ _USE_DB = os.environ.get("HELIA_USE_DB", "0") == "1"
 async def lifespan(app: FastAPI):
     if _USE_DB:
         from helia_etat_reseaux.scheduler import start_scheduler, stop_scheduler
+
         start_scheduler()
         yield
         stop_scheduler()

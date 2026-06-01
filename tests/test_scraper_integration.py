@@ -1,4 +1,5 @@
 """Tests d'intégration — réseau réel. Exécutés uniquement avec --run-integration."""
+
 import pytest
 
 from helia_etat_reseaux import scrape_maintenances
@@ -31,7 +32,7 @@ class TestScraperLive:
     @pytest.mark.integration
     def test_stable_ids(self):
         """Deux scrapes consécutifs sur la même page → mêmes ids."""
-        first  = {m.id for m in scrape_maintenances()}
+        first = {m.id for m in scrape_maintenances()}
         second = {m.id for m in scrape_maintenances()}
         assert first == second, (
             f"IDs instables — apparus : {second - first}, disparus : {first - second}"

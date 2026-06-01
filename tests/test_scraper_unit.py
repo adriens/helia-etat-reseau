@@ -1,4 +1,5 @@
 """Tests unitaires du scraper — offline, fixture HTML statique."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -9,8 +10,8 @@ import pytest
 from helia_etat_reseaux.models import COMMUNES_OFFICIELLES, Impact, Province, Service
 from helia_etat_reseaux.scraper import _split_zones, _to_iso, parse_items, scrape_maintenances
 
-
 # ── _split_zones ──────────────────────────────────────────────────────────────
+
 
 class TestSplitZones:
     def test_single(self):
@@ -44,6 +45,7 @@ class TestSplitZones:
 
 # ── _to_iso ───────────────────────────────────────────────────────────────────
 
+
 class TestToIso:
     def test_format(self):
         result = _to_iso(date(2026, 6, 4), 23, 0)
@@ -62,6 +64,7 @@ class TestToIso:
 
 
 # ── parse_items ───────────────────────────────────────────────────────────────
+
 
 class TestParseItems:
     def test_returns_list(self, fixture_html):
@@ -89,6 +92,7 @@ class TestParseItems:
 
 
 # ── scrape_maintenances (avec mock HTTP) ──────────────────────────────────────
+
 
 class TestScrapeMaintenancesMocked:
     def test_returns_maintenance_objects(self, fixture_html):
@@ -122,6 +126,7 @@ class TestScrapeMaintenancesMocked:
             items = scrape_maintenances()
 
         import re
+
         for m in items:
             assert re.match(r"^[0-9a-f]{8}$", m.id), f"id invalide : {m.id!r}"
 
@@ -148,9 +153,7 @@ class TestScrapeMaintenancesMocked:
             items = scrape_maintenances()
 
         for m in items:
-            assert m.timestamp_debut <= m.timestamp_fin, (
-                f"début > fin pour {m.id}"
-            )
+            assert m.timestamp_debut <= m.timestamp_fin, f"début > fin pour {m.id}"
 
     def test_services_enum(self, fixture_html):
         mock_resp = MagicMock()
@@ -202,12 +205,15 @@ class TestScrapeMaintenancesMocked:
 
     def test_http_error_raises_runtime(self):
         import requests as req
+
         mock_resp = MagicMock()
         mock_resp.raise_for_status.side_effect = req.exceptions.HTTPError("503")
 
-        with patch("helia_etat_reseaux.scraper.requests.get", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="3"):
-                scrape_maintenances()
+        with (
+            patch("helia_etat_reseaux.scraper.requests.get", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="3"),
+        ):
+            scrape_maintenances()
 
     def test_stable_id_between_scrapes(self, fixture_html):
         """Le même HTML doit produire les mêmes ids."""
@@ -216,7 +222,7 @@ class TestScrapeMaintenancesMocked:
         mock_resp.raise_for_status = MagicMock()
 
         with patch("helia_etat_reseaux.scraper.requests.get", return_value=mock_resp):
-            first  = {m.id for m in scrape_maintenances()}
+            first = {m.id for m in scrape_maintenances()}
             second = {m.id for m in scrape_maintenances()}
 
         assert first == second, "Les ids ne sont pas stables entre deux scrapes du même HTML"

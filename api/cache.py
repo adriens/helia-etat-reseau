@@ -3,6 +3,7 @@
 Utilise cachetools.TTLCache (thread-safe avec Lock).
 TTL par défaut : 300s (5 min). Configurable via HELIA_CACHE_TTL_SECONDS.
 """
+
 from __future__ import annotations
 
 import os
