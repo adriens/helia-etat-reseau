@@ -1,0 +1,25 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: "Nouveautés"
+      labels:
+        - "enhancement"
+        - "feature"
+    - title: "Corrections"
+      labels:
+        - "bug"
+        - "fix"
+    - title: "Tests & CI"
+      labels:
+        - "ci"
+        - "testing"
+    - title: "Documentation"
+      labels:
+        - "documentation"
+    - title: "Maintenance"
+      labels:
+        - "chore"
+        - "dependencies"
+    - title: "Autres changements"
