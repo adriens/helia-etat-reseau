@@ -2,6 +2,7 @@
 name = "helia-etat-reseaux"
 version = "0.1.0"
 description = "Scraper des maintenances programmées Helia NC (helia.nc/etat-du-reseau)"
+license = { text = "LGPL-3.0-or-later" }
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
