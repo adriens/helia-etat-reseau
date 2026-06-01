@@ -66,7 +66,9 @@ class TestUpsertRun:
             assert run["nb_items"] == 1
             assert run["status"] == "ok"
 
-            row = conn.execute("SELECT * FROM maintenances WHERE hash_id=?", ("a6cec665",)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM maintenances WHERE hash_id=?", ("a6cec665",)
+            ).fetchone()
             assert row is not None
             assert json.loads(row["communes_concernees"]) == ["NOUMEA", "DUMBEA"]
 
