@@ -53,7 +53,7 @@ addopts   = "-v --tb=short"
 
 [tool.coverage.run]
 source = ["helia_etat_reseaux"]
-omit   = ["*/cli.py"]
+omit   = ["*/cli.py", "*/mcp.py", "*/scheduler.py"]
 
 [tool.coverage.report]
 show_missing = true

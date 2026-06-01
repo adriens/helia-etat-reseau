@@ -11,7 +11,9 @@ from pathlib import Path
 DB_PATH = Path(__import__("os").environ.get("HELIA_DB_PATH", "/data/helia.db"))
 
 
-def _conn(path: Path = DB_PATH, *, readonly: bool = False) -> sqlite3.Connection:
+def _conn(path: Path | None = None, *, readonly: bool = False) -> sqlite3.Connection:
+    if path is None:
+        path = DB_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     uri = f"file:{path}{'?mode=ro' if readonly else ''}"
     conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
