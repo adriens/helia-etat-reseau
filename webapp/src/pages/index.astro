@@ -1,0 +1,718 @@
+---
+import '../styles/global.css';
+// In dev, /api is proxied to FastAPI; in prod, set VITE_API_BASE accordingly.
+const API_BASE = "/api";
+---
+
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Helia NC — Maintenances réseau</title>
+    <meta name="description" content="Carte des maintenances programmées sur le réseau Helia by OPT-NC en Nouvelle-Calédonie." />
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet" />
+    <script is:inline src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <style>
+      body { margin: 0; height: 100dvh; display: flex; flex-direction: column; background: #0f1117; color: #e2e8f0; font-family: system-ui,-apple-system,sans-serif; touch-action: none; }
+
+      .layout { display: flex; flex: 1; overflow: hidden; touch-action: none; }
+
+      aside {
+        width: 340px; flex-shrink: 0; display: flex; flex-direction: column;
+        background: #13151f; border-right: 1px solid #2d3148; overflow: hidden;
+      }
+
+      .filters { padding: 12px; border-bottom: 1px solid #2d3148; display: flex; flex-direction: column; gap: 8px; }
+      .filters label { font-size: .7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+      .filters select, .filters input {
+        width: 100%; background: #1a1d27; border: 1px solid #2d3148; color: #e2e8f0;
+        padding: 6px 8px; border-radius: 6px; font-size: .8rem;
+      }
+      .filters select:focus, .filters input:focus { outline: none; border-color: #a78bfa; }
+
+      .btn { width: 100%; padding: 7px 12px; border-radius: 6px; border: none; font-size: .8rem; cursor: pointer; font-weight: 500; transition: opacity .15s; }
+      .btn:hover { opacity: .85; }
+      .btn-primary { background: #7c3aed; color: #fff; }
+      .btn-secondary { background: #1e2235; border: 1px solid #2d3148; color: #94a3b8; }
+
+      .list-header { padding: 10px 12px; font-size: .7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #2d3148; display: flex; align-items: center; gap: 6px; }
+      .count-badge { background: #2d3148; color: #94a3b8; padding: 1px 6px; border-radius: 10px; font-size: .7rem; }
+
+      .maintenance-list {
+        flex: 1; overflow-y: auto;
+        scrollbar-width: thin; scrollbar-color: #2d3148 transparent;
+        padding: 8px; display: flex; flex-direction: column; gap: 10px;
+      }
+
+      /* ── Carte maintenance ──────────────────────────────────── */
+      .mi {
+        border-radius: 10px;
+        border: 1px solid #2a2e45;
+        background: #181b28;
+        cursor: pointer;
+        transition: border-color .15s, background .15s;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0,0,0,.45);
+      }
+      .mi::before {
+        content: '';
+        position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+        background: var(--accent, #475569);
+      }
+      .mi:hover   { background: #1e2235; border-color: #3d4263; }
+      .mi.active  { background: #1a1535; border-color: #6d28d9; }
+      .mi.active::before { background: #7c3aed; }
+      .mi.imp-20  { --accent: #f97316; }
+      .mi.imp-30  { --accent: #ef4444; }
+      .mi.imp-ad  { --accent: #eab308; }
+
+      /* en-tête de carte : impact pill + durée */
+      .mi-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 7px 12px 0 16px;
+      }
+      .mi-impact {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: .65rem; font-weight: 700; letter-spacing: .03em;
+        padding: 2px 8px; border-radius: 20px; text-transform: uppercase;
+      }
+      .mi-impact.imp-20 { background:#431407; border:1px solid #c2410c; color:#fed7aa; }
+      .mi-impact.imp-30 { background:#450a0a; border:1px solid #b91c1c; color:#fecaca; }
+      .mi-impact.imp-ad { background:#422006; border:1px solid #d97706; color:#fde68a; }
+
+      .mi-duration {
+        font-size: .65rem; font-weight: 600; color: #7c6aad;
+        background: #1a1535; border: 1px solid #2d2060;
+        padding: 2px 7px; border-radius: 20px;
+      }
+
+      /* corps : dates + communes + services */
+      .mi-body { padding: 6px 12px 9px 16px; }
+
+      .mi-dates {
+        display: flex; align-items: center; gap: 5px;
+        font-size: .72rem; color: #cbd5e1;
+        font-variant-numeric: tabular-nums;
+        margin-bottom: 5px;
+      }
+      .mi-dates i { color: #4c3f8a; width: 12px; text-align: center; }
+      .mi-dates .arr { color: #374151; margin: 0 1px; }
+
+      .mi-loc {
+        display: flex; align-items: baseline; gap: 5px;
+        font-size: .78rem; font-weight: 600; color: #e2e8f0;
+        margin-bottom: 7px;
+        line-height: 1.3;
+      }
+      .mi-loc i { color: #6d28d9; font-size: .7rem; flex-shrink: 0; margin-top: 2px; }
+      .mi-loc .more { color: #64748b; font-weight: 400; font-size: .68rem; }
+
+      /* séparateur */
+      .mi-sep { border: none; border-top: 1px solid #1e2235; margin: 0 12px 7px 16px; }
+
+      .mi-svcs { display: flex; gap: 4px; flex-wrap: wrap; }
+      .mi-svc {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: .63rem; font-weight: 500; color: #94a3b8;
+        background: #1e2235; border: 1px solid #2d3756; border-radius: 5px;
+        padding: 2px 7px;
+      }
+      .mi-svc i { font-size: .6rem; color: #4c3f8a; }
+      .mi-svc.toute-nc { background:#1a1535; border-color:#4c3f8a; color:#a78bfa; }
+      .mi-svc.toute-nc i { color:#a78bfa; }
+
+      .empty-state {
+        margin: 24px 6px; padding: 24px 16px; text-align: center;
+        color: #64748b; font-size: .82rem;
+        border: 1px dashed #2d3148; border-radius: 8px;
+      }
+
+      #map { flex: 1; position: relative; touch-action: none; }
+
+      #detail {
+        position: absolute; bottom: 24px; right: 16px; width: 320px;
+        background: #1a1d27; border: 1px solid #2d3148; border-radius: 10px;
+        padding: 16px; z-index: 10; display: none; max-height: 60vh; overflow-y: auto;
+      }
+      #detail.visible { display: block; }
+      #detail .close-btn { float: right; background: none; border: none; color: #64748b; cursor: pointer; font-size: 1.1rem; line-height: 1; }
+      #detail h2 { font-size: .85rem; font-weight: 600; margin-bottom: 8px; color: #a78bfa; }
+
+      .detail-row { display: flex; justify-content: space-between; font-size: .75rem; padding: 4px 0; border-bottom: 1px solid #1e2235; gap: 8px; }
+      .detail-row:last-child { border-bottom: none; }
+      .detail-label { color: #64748b; flex-shrink: 0; }
+      .detail-value { color: #e2e8f0; text-align: right; }
+
+      .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #2d3148; border-top-color: #7c3aed; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* popup styles moved to <style is:global> below — Astro scoping breaks MapLibre selectors */
+
+      @media (max-width: 700px) {
+        aside { width: 100%; height: 45vh; border-right: none; border-bottom: 1px solid #2d3148; }
+        .layout { flex-direction: column; }
+        #detail { width: calc(100% - 32px); right: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="flex items-center gap-3 px-4 py-2.5 bg-[#1a1d27] border-b border-[#2d3148] shrink-0">
+      <div>
+        <h1 class="text-sm font-semibold text-violet-400">Helia NC — Maintenances réseau</h1>
+        <p class="text-xs text-slate-500">Données en temps réel · helia.nc/etat-du-reseau</p>
+      </div>
+      <nav class="ml-auto flex gap-2 text-xs">
+        <a href="/rss.xml" class="text-slate-400 hover:text-violet-400 px-2 py-1 rounded border border-[#2d3148] hover:border-violet-500 transition-colors">RSS</a>
+        <a href="/calendar.ics" class="text-slate-400 hover:text-violet-400 px-2 py-1 rounded border border-[#2d3148] hover:border-violet-500 transition-colors">iCal</a>
+        <a href="/api/docs" target="_blank" rel="noopener" class="text-slate-400 hover:text-violet-400 px-2 py-1 rounded border border-[#2d3148] hover:border-violet-500 transition-colors">API</a>
+        <a href="/api/redoc" target="_blank" rel="noopener" class="text-slate-400 hover:text-violet-400 px-2 py-1 rounded border border-[#2d3148] hover:border-violet-500 transition-colors">Docs</a>
+      </nav>
+    </header>
+
+    <div class="layout">
+      <aside>
+        <div class="filters">
+          <div>
+            <label for="filter-commune">Commune</label>
+            <input id="filter-commune" type="text" placeholder="ex: NOUMEA" autocomplete="off" />
+          </div>
+          <div>
+            <label for="filter-province">Province</label>
+            <select id="filter-province">
+              <option value="">Toutes les provinces</option>
+              <option value="PROVINCE_SUD">Province Sud</option>
+              <option value="PROVINCE_NORD">Province Nord</option>
+              <option value="ILES_LOYAUTE">Îles Loyauté</option>
+            </select>
+          </div>
+          <div>
+            <label for="filter-service">Service</label>
+            <select id="filter-service">
+              <option value="">Tous les services</option>
+              <option value="TELEPHONIE_FIXE">Téléphonie fixe</option>
+              <option value="TELEPHONIE_MOBILE">Téléphonie mobile</option>
+              <option value="INTERNET_FIXE">Internet fixe</option>
+              <option value="INTERNET_MOBILE">Internet mobile</option>
+              <option value="TELEVISION">Télévision</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="btn-search">Rechercher</button>
+          <button class="btn btn-secondary" id="btn-geolocate">📍 Me localiser (50 km)</button>
+        </div>
+        <div class="list-header">
+          Maintenances <span class="count-badge" id="count">0</span>
+          <span id="loading" style="display:none"><span class="spinner"></span></span>
+        </div>
+        <div class="maintenance-list" id="maintenance-list">
+          <div class="empty-state">Chargement…</div>
+        </div>
+      </aside>
+
+      <div id="map">
+        <div id="detail">
+          <button class="close-btn" id="detail-close">✕</button>
+          <h2 id="detail-title">Maintenance</h2>
+          <div id="detail-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <script define:vars={{ API_BASE }}>
+      const map = new maplibregl.Map({
+        container: "map",
+        style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+        center: [165.8, -21.2],
+        zoom: 6.2,
+        attributionControl: false,
+      });
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      map.touchZoomRotate.enable();
+      map.touchPitch.enable();
+
+      // Sur PC tactile, le browser intercepte le pinch avant MapLibre si le listener
+      // touchstart est passif. On force un listener non-passif sur le conteneur
+      // pour bloquer le comportement par défaut sur gestes multi-touch.
+      map.getContainer().addEventListener("touchstart", (e) => {
+        if (e.touches.length > 1) e.preventDefault();
+      }, { passive: false });
+
+      const CENTROIDS = {
+        "NOUMEA":       [-22.2578, 166.4501],
+        "DUMBEA":       [-22.1265, 166.4937],
+        "PAITA":        [-22.0410, 166.3166],
+        "MONT-DORE":    [-22.2757, 166.7285],
+        "BOULOUPARIS":  [-21.8593, 166.1119],
+        "YATE":         [-22.0835, 166.7249],
+        "ILE DES PINS": [-22.6125, 167.4799],
+        "LA FOA":       [-21.7227, 165.8805],
+        "FARINO":       [-21.6482, 165.7592],
+        "SARRAMEA":     [-21.6223, 165.8190],
+        "MOINDOU":      [-21.6259, 165.6749],
+        "BOURAIL":      [-21.5344, 165.4617],
+        "THIO":         [-21.7244, 166.2565],
+        "CANALA":       [-21.5313, 165.9690],
+        "KOUAOUA":      [-21.4583, 165.7826],
+        "HOUAILOU":     [-21.3302, 165.5500],
+        "PONERIHOUEN":  [-21.1312, 165.3155],
+        "POINDIMIE":    [-20.9484, 165.1758],
+        "TOUHO":        [-20.8180, 165.1577],
+        "POYA":         [-21.3306, 165.2104],
+        "POUEMBOUT":    [-21.1671, 165.0010],
+        "KONE":         [-21.0263, 164.9064],
+        "VOH":          [-20.8689, 164.7342],
+        "KAALA-GOMEN":  [-20.7002, 164.5131],
+        "KOUMAC":       [-20.5033, 164.3282],
+        "POUM":         [-20.2629, 164.1477],
+        "OUEGOA":       [-20.4081, 164.4651],
+        "POUEBO":       [-20.4142, 164.5976],
+        "BELEP":        [-19.6931, 163.6502],
+        "HIENGHENE":    [-20.7161, 164.8454],
+        "LIFOU":        [-20.9450, 167.2387],
+        "MARE":         [-21.5150, 167.9704],
+        "OUVEA":        [-20.5636, 166.5627],
+      };
+
+      let maintenances = [], markers = [];
+      // markers = [{ mapMarker, dot, ids: Set<maintenanceId> }, ...]
+
+      const listEl = document.getElementById("maintenance-list");
+      const countEl = document.getElementById("count");
+      const loadingEl = document.getElementById("loading");
+      const detailEl = document.getElementById("detail");
+      const detailTitle = document.getElementById("detail-title");
+      const detailBody = document.getElementById("detail-body");
+
+      function buildUrl(overrides = {}) {
+        const commune = document.getElementById("filter-commune").value.trim().toUpperCase();
+        const province = document.getElementById("filter-province").value;
+        const service = document.getElementById("filter-service").value;
+        const params = new URLSearchParams();
+        if (commune) params.set("commune", commune);
+        if (province) params.set("province", province);
+        if (service) params.set("service", service);
+        Object.entries(overrides).forEach(([k, v]) => params.set(k, v));
+        const base = `${API_BASE}/maintenances/`;
+        return params.toString() ? `${base}?${params}` : base;
+      }
+
+      async function fetchMaintenances(url) {
+        loadingEl.style.display = "inline-block";
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return await res.json();
+        } catch (e) {
+          listEl.innerHTML = `<div class="empty-state">Erreur : ${e.message}</div>`;
+          return [];
+        } finally {
+          loadingEl.style.display = "none";
+        }
+      }
+
+      const MONTH = ["jan","fév","mar","avr","mai","jun","jul","aoû","sep","oct","nov","déc"];
+
+      function fmtDate(iso) {
+        return new Date(iso).toLocaleString("fr-NC", {
+          day: "2-digit", month: "short", year: "numeric",
+          hour: "2-digit", minute: "2-digit", timeZone: "Pacific/Noumea",
+        });
+      }
+
+      const _shortFmt = new Intl.DateTimeFormat("fr-NC", {
+        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+        timeZone: "Pacific/Noumea", hour12: false,
+      });
+      function fmtShort(iso) {
+        // "02 juin, 07:30" → "02 juin 07h30"
+        return _shortFmt.format(new Date(iso)).replace(",", "").replace(":", "h");
+      }
+
+      function fmtDuration(min) {
+        if (min < 60) return `${min} min`;
+        const h = Math.floor(min / 60), r = min % 60;
+        return r ? `${h}h${String(r).padStart(2,"0")}` : `${h}h`;
+      }
+
+      function impactClass(impact) {
+        if (impact === "A_DETERMINER") return "imp-ad";
+        if (impact === "COUPURE_30_MIN") return "imp-coupure-30";
+        return "imp-coupure-20";
+      }
+
+      function impactTag(impact) {
+        if (impact === "A_DETERMINER") return `<span class="tag tag-impact-ad">⚠ À déterminer</span>`;
+        if (impact === "COUPURE_30_MIN") return `<span class="tag tag-impact-30">⚡ Coupure 30 min</span>`;
+        return `<span class="tag tag-impact-20">⚡ Coupure 20–30 min</span>`;
+      }
+
+      const SVC = {
+        TELEPHONIE_FIXE:          { icon: "fa-phone",          label: "Tél. fixe" },
+        TELEPHONIE_MOBILE:        { icon: "fa-mobile-screen",  label: "Tél. mobile" },
+        INTERNET_FIXE:            { icon: "fa-wifi",           label: "Internet fixe" },
+        INTERNET_MOBILE:          { icon: "fa-signal",         label: "Internet mobile" },
+        TELEVISION:               { icon: "fa-tv",             label: "Télévision" },
+        RESEAU_CUIVRE:            { icon: "fa-ethernet",       label: "Cuivre" },
+        FIBRE_OPTIQUE:            { icon: "fa-circle-dot",     label: "Fibre" },
+        LIAISONS_CELERIS_ETHERNET:{ icon: "fa-network-wired",  label: "Céléris/Eth." },
+      };
+
+      const IMPACT_META = {
+        COUPURE_20_30_MIN: { cls: "imp-20", icon: "fa-bolt",            label: "Coupure 20–30 min" },
+        COUPURE_30_MIN:    { cls: "imp-30", icon: "fa-bolt",            label: "Coupure 30 min" },
+        A_DETERMINER:      { cls: "imp-ad", icon: "fa-circle-question", label: "À déterminer" },
+      };
+
+      function renderList(data) {
+        maintenances = data;
+        countEl.textContent = data.length;
+        if (!data.length) {
+          listEl.innerHTML = '<div class="empty-state"><i class="fa-solid fa-satellite-dish" style="font-size:1.4rem;display:block;margin-bottom:8px;color:#4c3f8a"></i>Aucune maintenance trouvée.</div>';
+          clearMarkers();
+          return;
+        }
+
+        listEl.innerHTML = data.map(m => {
+          const im   = IMPACT_META[m.impact] ?? IMPACT_META.A_DETERMINER;
+          const communes = m.communes_concernees;
+          const locLabel = m.est_toute_nc
+            ? "Toute la Nouvelle-Calédonie"
+            : communes.length > 4
+              ? `${communes.slice(0,4).join(", ")} <span class="more">+${communes.length-4}</span>`
+              : communes.join(", ");
+
+          const svcs = m.services.map(s => {
+            const sv = SVC[s] ?? { icon: "fa-circle-nodes", label: s.replace(/_/g," ") };
+            return `<span class="mi-svc"><i class="fa-solid ${sv.icon}"></i>${sv.label}</span>`;
+          }).join("");
+
+          const toutNC = m.est_toute_nc
+            ? `<span class="mi-svc toute-nc"><i class="fa-solid fa-earth-oceania"></i>Toute NC</span>`
+            : "";
+
+          return `
+          <div class="mi ${im.cls}" data-id="${m.id}">
+            <div class="mi-head">
+              <span class="mi-impact ${im.cls}">
+                <i class="fa-solid ${im.icon}"></i>${im.label}
+              </span>
+              <span class="mi-duration"><i class="fa-regular fa-clock" style="margin-right:3px"></i>${fmtDuration(m.duree_fenetre_minutes)}</span>
+            </div>
+            <div class="mi-body">
+              <div class="mi-dates">
+                <i class="fa-regular fa-calendar-days"></i>
+                <span>${fmtShort(m.timestamp_debut)}</span>
+                <span class="arr">→</span>
+                <span>${fmtShort(m.timestamp_fin)}</span>
+              </div>
+              <div class="mi-loc" title="${communes.join(", ")}">
+                <i class="fa-solid fa-location-dot"></i>
+                <span>${locLabel}</span>
+              </div>
+              <hr class="mi-sep">
+              <div class="mi-svcs">${svcs}${toutNC}</div>
+            </div>
+          </div>`;
+        }).join("");
+
+        listEl.querySelectorAll(".mi").forEach(el =>
+          el.addEventListener("click", () => selectMaintenance(el.dataset.id))
+        );
+        renderMarkers(data);
+        // Bref flash sur tous les pins pour signaler les nouveaux résultats
+        setTimeout(flashResultPins, 80);
+      }
+
+      // Pulse rapide (×2) sur tous les pins au chargement d'un résultat de recherche
+      function flashResultPins() {
+        markers.forEach(({ dot }) => {
+          dot.style.animation = "dot-ping 0.55s ease-out 2";
+        });
+        setTimeout(() => markers.forEach(({ dot }) => {
+          // Ne pas écraser l'animation si un pin a déjà été sélectionné entre-temps
+          if (dot.style.animation && !dot.style.animation.includes("1.4s")) {
+            dot.style.animation = "";
+          }
+        }), 1300);
+      }
+
+      function clearMarkers() { markers.forEach(({ mapMarker }) => mapMarker.remove()); markers = []; }
+
+      function impactDot(impact) {
+        if (impact === "A_DETERMINER") return "#eab308";
+        if (impact === "COUPURE_30_MIN") return "#ef4444";
+        return "#f97316";
+      }
+
+      function buildPopupHtml(commune, ms) {
+        const rows = ms.map(m => {
+          const color = impactDot(m.impact);
+          const svcs  = m.services.map(s => SVC[s]?.label ?? s.replace(/_/g," ")).join(" · ");
+          return `
+            <div class="hp-row">
+              <div class="hp-dot" style="background:${color};box-shadow:0 0 4px ${color}99"></div>
+              <div class="hp-content">
+                <div class="hp-dates">${fmtShort(m.timestamp_debut)} → ${fmtShort(m.timestamp_fin)}</div>
+                <div class="hp-svcs">${svcs}</div>
+              </div>
+            </div>`;
+        }).join("");
+
+        return `
+          <div style="min-width:200px">
+            <div class="hp-head">
+              <span class="hp-commune">📍 ${commune}</span>
+              <span class="hp-count">${ms.length} maint.</span>
+            </div>
+            <div class="hp-body">${rows}</div>
+            <div class="hp-footer">Cliquer pour le détail</div>
+          </div>`;
+      }
+
+      function renderMarkers(data) {
+        clearMarkers();
+        const byCommune = new Map();
+        data.forEach(m => m.communes_concernees.forEach(c => {
+          if (!byCommune.has(c)) byCommune.set(c, []);
+          byCommune.get(c).push(m);
+        }));
+
+        byCommune.forEach((ms, commune) => {
+          const coords = CENTROIDS[commune];
+          if (!coords) return;
+
+          const hasRed    = ms.some(m => m.impact === "COUPURE_30_MIN");
+          const hasOrange = ms.some(m => m.impact !== "COUPURE_30_MIN" && m.impact !== "A_DETERMINER");
+          const dotColor  = hasRed ? "#ef4444" : hasOrange ? "#f97316" : "#eab308";
+          const ringColor = hasRed ? "#fca5a5" : hasOrange ? "#fed7aa" : "#fde68a";
+
+          // Wrapper 32×32 transparent → grande zone de survol, évite les faux mouseleave
+          const wrapper = document.createElement("div");
+          Object.assign(wrapper.style, {
+            width: "32px", height: "32px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+          });
+
+          const dot = document.createElement("div");
+          Object.assign(dot.style, {
+            width: "12px", height: "12px", background: dotColor,
+            border: `2px solid ${ringColor}`, borderRadius: "50%",
+            transition: "width .2s, height .2s, border-width .2s",
+            boxShadow: `0 0 6px ${dotColor}88`,
+          });
+          dot.style.setProperty("--dc", dotColor);
+          wrapper.appendChild(dot);
+
+          const popup = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false,
+            offset: 14,
+            className: "helia-popup",
+            maxWidth: "260px",
+          })
+            .setLngLat([coords[1], coords[0]])
+            .setHTML(buildPopupHtml(commune, ms));
+
+          // Debounce hide : 150 ms de grâce entre la sortie du wrapper et la fermeture
+          let hideTimer = null;
+
+          wrapper.addEventListener("mouseenter", () => {
+            clearTimeout(hideTimer);
+            dot.style.transform = "scale(1.6)";
+            popup.addTo(map);
+          });
+          wrapper.addEventListener("mouseleave", () => {
+            hideTimer = setTimeout(() => {
+              dot.style.transform = "scale(1)";
+              popup.remove();
+            }, 150);
+          });
+          wrapper.addEventListener("click", () => {
+            // Si plusieurs maintenances sur la commune, sélectionne celle
+            // la plus proche dans le temps (debut le plus tôt)
+            const target = ms.slice().sort((a, b) =>
+              a.timestamp_debut.localeCompare(b.timestamp_debut)
+            )[0];
+            // Passe la commune cliquée pour que flyTo centre exactement ici
+            selectMaintenance(target.id, commune);
+          });
+
+          const mapMarker = new maplibregl.Marker({ element: wrapper, anchor: "center" })
+            .setLngLat([coords[1], coords[0]])
+            .addTo(map);
+
+          markers.push({ mapMarker, dot, ids: new Set(ms.map(m => m.id)), commune });
+        });
+      }
+
+      // focusCommune : commune cliquée sur la carte (facultatif) — évite de
+      // centrer sur communes_concernees[0] quand ce n'est pas la bonne
+      function selectMaintenance(id, focusCommune = null) {
+        listEl.querySelectorAll(".mi").forEach(el =>
+          el.classList.toggle("active", el.dataset.id === id)
+        );
+
+        // Scroll la carte sidebar vers la card sélectionnée
+        const activeEl = listEl.querySelector(`.mi[data-id="${id}"]`);
+        if (activeEl) activeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+        // Agrandir + animer le(s) pin(s) concerné(s), réduire les autres.
+        // Si focusCommune est fourni (clic sur la carte), seul ce pin est agrandi.
+        // Sinon (clic barre latérale), tous les pins qui portent cette maintenance.
+        markers.forEach(({ dot, ids, commune }) => {
+          const selected = focusCommune ? commune === focusCommune : ids.has(id);
+          dot.style.width       = selected ? "26px" : "12px";
+          dot.style.height      = selected ? "26px" : "12px";
+          dot.style.borderWidth = selected ? "3px"  : "2px";
+          dot.style.animation   = selected ? "dot-ping 1.4s ease-out infinite" : "";
+          dot.style.boxShadow   = selected ? "" : `0 0 6px ${dot.style.background}88`;
+        });
+
+        const m = maintenances.find(x => x.id === id);
+        if (!m) return;
+        detailTitle.textContent = `Maintenance #${m.id}`;
+        detailBody.innerHTML = [
+          ["Début", fmtDate(m.timestamp_debut)],
+          ["Fin", fmtDate(m.timestamp_fin)],
+          ["Durée fenêtre", `${m.duree_fenetre_minutes} min`],
+          ["Coupure", m.duree_coupure_min_minutes != null ? `${m.duree_coupure_min_minutes}–${m.duree_coupure_max_minutes} min` : "À déterminer"],
+          ["Communes", m.communes_concernees.join(", ")],
+          ["Services", m.services.map(s => s.replace(/_/g," ")).join(", ")],
+          ["Impact", m.impact.replace(/_/g," ")],
+          ["Provinces", m.provinces_concernees.join(", ")],
+          ["Toute NC", m.est_toute_nc ? "Oui" : "Non"],
+        ].map(([l, v]) => `<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-value">${v}</span></div>`).join("");
+        detailEl.classList.add("visible");
+
+        // Centrer sur la commune effectivement cliquée (ou la première sinon)
+        const refCommune = (focusCommune && CENTROIDS[focusCommune]) ? focusCommune : m.communes_concernees[0];
+        const c = CENTROIDS[refCommune];
+        if (c) map.flyTo({ center: [c[1], c[0]], zoom: 9, duration: 800 });
+      }
+
+      document.getElementById("detail-close").addEventListener("click", () => {
+        detailEl.classList.remove("visible");
+        listEl.querySelectorAll(".mi").forEach(el => el.classList.remove("active"));
+        markers.forEach(({ dot }) => {
+          dot.style.width       = "12px";
+          dot.style.height      = "12px";
+          dot.style.borderWidth = "2px";
+          dot.style.animation   = "";
+          dot.style.boxShadow   = `0 0 6px ${dot.style.background}88`;
+        });
+      });
+
+      document.getElementById("btn-search").addEventListener("click", async () => {
+        renderList(await fetchMaintenances(buildUrl()));
+      });
+
+      document.getElementById("btn-geolocate").addEventListener("click", () => {
+        if (!navigator.geolocation) { alert("Géolocalisation non disponible."); return; }
+        navigator.geolocation.getCurrentPosition(
+          async ({ coords }) => {
+            const url = `${API_BASE}/maintenances/search?lat=${coords.latitude}&lon=${coords.longitude}&radius_km=50`;
+            renderList(await fetchMaintenances(url));
+            map.flyTo({ center: [coords.longitude, coords.latitude], zoom: 9 });
+          },
+          () => alert("Impossible d'obtenir votre position."),
+        );
+      });
+
+      window.addEventListener("load", async () => {
+        renderList(await fetchMaintenances(buildUrl()));
+      });
+    </script>
+</body>
+</html>
+
+<style is:global>
+  /* Force tous les éléments MapLibre à capturer les gestes tactiles */
+  .maplibregl-canvas-container,
+  .maplibregl-canvas { touch-action: none !important; }
+
+  /* Popup MapLibre — is:global car Astro scope les sélecteurs normaux */
+  .helia-popup {
+    pointer-events: none;
+  }
+  .helia-popup .maplibregl-popup-content {
+    background: #0f1117;
+    border: 1px solid #4c3f8a;
+    border-radius: 10px;
+    padding: 0;
+    box-shadow: 0 12px 32px rgba(0,0,0,.75);
+    overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  .helia-popup .maplibregl-popup-tip {
+    border-top-color: #0f1117 !important;
+    border-bottom-color: #0f1117 !important;
+  }
+  .hp-head {
+    background: #1a1535;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #2d2060;
+  }
+  .hp-commune {
+    font-size: .8rem;
+    font-weight: 700;
+    color: #c4b5fd;
+  }
+  .hp-count {
+    font-size: .65rem;
+    color: #7c6aad;
+    background: #0f1117;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .hp-body { padding: 6px 10px; }
+  .hp-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #1e1a35;
+  }
+  .hp-row:last-child { border-bottom: none; }
+  .hp-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+  .hp-content {}
+  .hp-dates {
+    font-size: .73rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    letter-spacing: .01em;
+    margin-bottom: 2px;
+  }
+  .hp-svcs {
+    font-size: .64rem;
+    color: #94a3b8;
+    line-height: 1.4;
+  }
+  .hp-footer {
+    padding: 4px 12px 6px;
+    font-size: .6rem;
+    color: #4a4570;
+    text-align: right;
+    font-style: italic;
+  }
+
+  /* ── Animation ping sur le dot sélectionné ── */
+  /* box-shadow ne perturbe pas le layout ni le positionnement MapLibre */
+  @keyframes dot-ping {
+    0%   { box-shadow: 0 0 0  0px rgba(255,255,255,.7); }
+    60%  { box-shadow: 0 0 0 18px rgba(255,255,255,.15); }
+    100% { box-shadow: 0 0 0 26px rgba(255,255,255,0); }
+  }
+</style>

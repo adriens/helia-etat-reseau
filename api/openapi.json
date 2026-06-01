@@ -1,0 +1,342 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Helia NC — État du réseau",
+    "description": "\n## Helia NC — Maintenances programmées\n\nAPI de consultation en temps réel des maintenances programmées sur le réseau télécoms\n**Helia by OPT-NC** en Nouvelle-Calédonie.\n\n### Source des données\nLes données sont scrapées à la volée depuis\n[helia.nc/etat-du-reseau](https://helia.nc/etat-du-reseau).\nAucun cache côté API — chaque appel reflète l'état courant de la page.\n\n### Identifiants stables\nChaque maintenance possède un `id` SHA256 (8 hex) calculé sur ses champs métier.\nCet identifiant est **stable entre deux scrapes** si la maintenance n'a pas changé,\nce qui permet :\n- la **clé de message Kafka** (partitionnement déterministe)\n- l'**upsert idempotent** dans OpenSearch (`_id`)\n\n### Communes officielles\nLes communes sont normalisées selon le référentiel officiel\n[communes-nc-limites-terrestres-simplifiees](https://data.gouv.nc/explore/dataset/communes-nc-limites-terrestres-simplifiees/)\nde data.gouv.nc. Jointure directe possible sur le champ `nom`.\n\n### Timezone\nTous les timestamps de maintenance sont en **heure locale NC (UTC+11)**, sans changement d'heure.\nLe champ `scraped_at` est en **UTC**.\n",
+    "contact": {
+      "name": "OPT-NC",
+      "url": "https://www.opt.nc/"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/maintenances/": {
+      "get": {
+        "tags": [
+          "maintenances"
+        ],
+        "summary": "Liste toutes les maintenances programmées",
+        "description": "Scrape en temps réel la page [helia.nc/etat-du-reseau](https://helia.nc/etat-du-reseau) et retourne la liste complète des maintenances programmées, validées et normalisées.\n\n- Communes normalisées selon le référentiel officiel NC\n- Timestamps en heure locale NC (UTC+11)\n- Services et impact sous forme d'enums\n- `id` stable entre deux scrapes (SHA256)",
+        "operationId": "get_maintenances_maintenances__get",
+        "responses": {
+          "200": {
+            "description": "Liste des maintenances programmées, triées par ordre d'apparition sur la page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Maintenance"
+                  },
+                  "type": "array",
+                  "title": "Response Get Maintenances Maintenances  Get"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "La page helia.nc est inaccessible (timeout ou erreur HTTP) après 3 tentatives.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Scrape échoué après 3 tentatives : Connection timeout"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/maintenances/{id}": {
+      "get": {
+        "tags": [
+          "maintenances"
+        ],
+        "summary": "Récupère une maintenance par son identifiant SHA256",
+        "description": "Retourne la maintenance dont l'`id` correspond aux 8 caractères hexadécimaux fournis.\n\nL'`id` est un SHA256 tronqué calculé sur les champs métier de la maintenance. Il est **stable** tant que la maintenance n'est pas modifiée sur la source.",
+        "operationId": "get_maintenance_by_id_maintenances__id__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}$",
+              "description": "Identifiant SHA256 de la maintenance (8 caractères hexadécimaux minuscules).",
+              "examples": [
+                "a6cec665"
+              ],
+              "title": "Id"
+            },
+            "description": "Identifiant SHA256 de la maintenance (8 caractères hexadécimaux minuscules)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "La maintenance correspondant à l'identifiant fourni.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Maintenance"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Aucune maintenance ne correspond à cet identifiant.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "'deadbeef' introuvable"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "La page helia.nc est inaccessible (timeout ou erreur HTTP) après 3 tentatives.",
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Scrape échoué après 3 tentatives : Connection timeout"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Impact": {
+        "type": "string",
+        "enum": [
+          "COUPURE_20_30_MIN",
+          "COUPURE_30_MIN",
+          "A_DETERMINER"
+        ],
+        "title": "Impact",
+        "description": "Sévérité de l'impact sur les utilisateurs finals.",
+        "x-enumDescriptions": {
+          "A_DETERMINER": "Durée d'impact non encore déterminée",
+          "COUPURE_20_30_MIN": "Coupure effective estimée entre 20 et 30 minutes",
+          "COUPURE_30_MIN": "Coupure effective estimée à 30 minutes"
+        }
+      },
+      "Maintenance": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}$",
+            "title": "Id",
+            "description": "Identifiant SHA256 tronqué à 8 caractères hexadécimaux, calculé à partir de `timestamp_debut`, `timestamp_fin`, `services` (triés) et `communes_concernees` (triées). **Stable entre deux scrapes** si la maintenance n'a pas changé : permet l'idempotence dans Kafka et l'upsert dans OpenSearch (`_id`)."
+          },
+          "scraped_at": {
+            "type": "string",
+            "title": "Scraped At",
+            "description": "Horodatage UTC du scrape, au format `YYYY-MM-DDTHH:MM:SSZ`."
+          },
+          "source_url": {
+            "type": "string",
+            "title": "Source Url",
+            "description": "URL de la page source scrapée."
+          },
+          "timestamp_debut": {
+            "type": "string",
+            "title": "Timestamp Debut",
+            "description": "Début de la fenêtre de maintenance au format ISO 8601, heure locale Nouvelle-Calédonie **UTC+11** (pas de changement d'heure). Exemple : `2026-06-01T23:00:00+11:00`."
+          },
+          "timestamp_fin": {
+            "type": "string",
+            "title": "Timestamp Fin",
+            "description": "Fin de la fenêtre de maintenance au format ISO 8601, heure locale Nouvelle-Calédonie **UTC+11**. Peut tomber le lendemain pour les fenêtres nocturnes (ex: 23h→5h)."
+          },
+          "duree_fenetre_minutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Duree Fenetre Minutes",
+            "description": "Durée totale de la fenêtre de maintenance en minutes, calculée comme `timestamp_fin − timestamp_debut`. Distinct de la durée de coupure effective."
+          },
+          "duree_coupure_min_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duree Coupure Min Minutes",
+            "description": "Durée **minimale** estimée de la coupure effective en minutes. `null` si `impact` vaut `A_DETERMINER`."
+          },
+          "duree_coupure_max_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duree Coupure Max Minutes",
+            "description": "Durée **maximale** estimée de la coupure effective en minutes. `null` si `impact` vaut `A_DETERMINER`."
+          },
+          "communes_concernees": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Communes Concernees",
+            "description": "Liste des communes officielles NC affectées, en majuscules. Normalisées selon le référentiel [communes-nc-limites-terrestres-simplifiees](https://data.gouv.nc/explore/dataset/communes-nc-limites-terrestres-simplifiees/) de data.gouv.nc — jointure directe possible sur le champ `nom`."
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/Service"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Services",
+            "description": "Liste des services télécoms impactés par cette maintenance."
+          },
+          "impact": {
+            "$ref": "#/components/schemas/Impact",
+            "description": "Sévérité estimée de la coupure effective pour les abonnés."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scraped_at",
+          "source_url",
+          "timestamp_debut",
+          "timestamp_fin",
+          "duree_fenetre_minutes",
+          "duree_coupure_min_minutes",
+          "duree_coupure_max_minutes",
+          "communes_concernees",
+          "services",
+          "impact"
+        ],
+        "title": "Maintenance",
+        "description": "Maintenance programmée sur le réseau télécoms Helia (OPT-NC).\n\nChaque objet représente une fenêtre de maintenance planifiée, avec les\ncommunes concernées, les services impactés et l'estimation de coupure.",
+        "example": {
+          "communes_concernees": [
+            "HOUAILOU",
+            "POINDIMIE",
+            "KONE"
+          ],
+          "duree_coupure_max_minutes": 30,
+          "duree_coupure_min_minutes": 20,
+          "duree_fenetre_minutes": 360,
+          "id": "a6cec665",
+          "impact": "COUPURE_20_30_MIN",
+          "scraped_at": "2026-06-01T10:00:00Z",
+          "services": [
+            "TELEPHONIE_FIXE",
+            "INTERNET_FIXE"
+          ],
+          "source_url": "https://helia.nc/etat-du-reseau",
+          "timestamp_debut": "2026-06-01T23:00:00+11:00",
+          "timestamp_fin": "2026-06-02T05:00:00+11:00"
+        }
+      },
+      "Service": {
+        "type": "string",
+        "enum": [
+          "TELEPHONIE_FIXE",
+          "TELEPHONIE_MOBILE",
+          "INTERNET_FIXE",
+          "INTERNET_MOBILE",
+          "FIBRE_OPTIQUE",
+          "RESEAU_CUIVRE",
+          "LIAISONS_CELERIS_ETHERNET"
+        ],
+        "title": "Service",
+        "description": "Service télécom impacté par la maintenance.",
+        "x-enumDescriptions": {
+          "FIBRE_OPTIQUE": "Réseau fibre optique",
+          "INTERNET_FIXE": "Accès Internet fixe (ADSL, fibre, cuivre)",
+          "INTERNET_MOBILE": "Accès Internet mobile (4G/5G)",
+          "LIAISONS_CELERIS_ETHERNET": "Liaisons Ethernet dédiées Céléris (offres entreprises)",
+          "RESEAU_CUIVRE": "Réseau cuivre (paires téléphoniques)",
+          "TELEPHONIE_FIXE": "Téléphonie fixe (RTC / VoIP fixe)",
+          "TELEPHONIE_MOBILE": "Téléphonie mobile (voix)"
+        }
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "maintenances",
+      "description": "Consultation des maintenances programmées sur le réseau Helia NC. Les données sont scrapées en temps réel depuis helia.nc."
+    }
+  ]
+}

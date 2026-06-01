@@ -1,0 +1,141 @@
+{
+  "$defs": {
+    "Impact": {
+      "enum": [
+        "COUPURE_20_30_MIN",
+        "COUPURE_30_MIN",
+        "A_DETERMINER"
+      ],
+      "title": "Impact",
+      "type": "string"
+    },
+    "Service": {
+      "enum": [
+        "TELEPHONIE_FIXE",
+        "TELEPHONIE_MOBILE",
+        "INTERNET_FIXE",
+        "INTERNET_MOBILE",
+        "FIBRE_OPTIQUE",
+        "RESEAU_CUIVRE",
+        "LIAISONS_CELERIS_ETHERNET"
+      ],
+      "title": "Service",
+      "type": "string"
+    }
+  },
+  "example": {
+    "communes_concernees": [
+      "HOUAILOU",
+      "POINDIMIE",
+      "KONE"
+    ],
+    "duree_coupure_max_minutes": 30,
+    "duree_coupure_min_minutes": 20,
+    "duree_fenetre_minutes": 360,
+    "id": "a6cec665",
+    "impact": "COUPURE_20_30_MIN",
+    "scraped_at": "2026-06-01T10:00:00Z",
+    "services": [
+      "TELEPHONIE_FIXE",
+      "INTERNET_FIXE"
+    ],
+    "source_url": "https://helia.nc/etat-du-reseau",
+    "timestamp_debut": "2026-06-01T23:00:00+11:00",
+    "timestamp_fin": "2026-06-02T05:00:00+11:00"
+  },
+  "properties": {
+    "id": {
+      "description": "Identifiant SHA256 (8 hex) dérivé des champs métier — stable entre deux scrapes si la maintenance n'a pas changé.",
+      "pattern": "^[0-9a-f]{8}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "scraped_at": {
+      "description": "Horodatage UTC du scrape au format ISO 8601.",
+      "title": "Scraped At",
+      "type": "string"
+    },
+    "source_url": {
+      "description": "URL source scrapée.",
+      "title": "Source Url",
+      "type": "string"
+    },
+    "timestamp_debut": {
+      "description": "Début de la fenêtre de maintenance, heure locale NC (UTC+11).",
+      "title": "Timestamp Debut",
+      "type": "string"
+    },
+    "timestamp_fin": {
+      "description": "Fin de la fenêtre de maintenance, heure locale NC (UTC+11).",
+      "title": "Timestamp Fin",
+      "type": "string"
+    },
+    "duree_fenetre_minutes": {
+      "description": "Durée totale de la fenêtre de maintenance en minutes.",
+      "exclusiveMinimum": 0,
+      "title": "Duree Fenetre Minutes",
+      "type": "integer"
+    },
+    "duree_coupure_min_minutes": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Durée minimale estimée de la coupure effective en minutes. Null si impact A_DETERMINER.",
+      "title": "Duree Coupure Min Minutes"
+    },
+    "duree_coupure_max_minutes": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Durée maximale estimée de la coupure effective en minutes. Null si impact A_DETERMINER.",
+      "title": "Duree Coupure Max Minutes"
+    },
+    "communes_concernees": {
+      "description": "Liste des communes officielles NC affectées (référentiel data.gouv.nc).",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Communes Concernees",
+      "type": "array"
+    },
+    "services": {
+      "description": "Services impactés.",
+      "items": {
+        "$ref": "#/$defs/Service"
+      },
+      "minItems": 1,
+      "title": "Services",
+      "type": "array"
+    },
+    "impact": {
+      "$ref": "#/$defs/Impact",
+      "description": "Sévérité de l'impact sur les utilisateurs."
+    }
+  },
+  "required": [
+    "id",
+    "scraped_at",
+    "source_url",
+    "timestamp_debut",
+    "timestamp_fin",
+    "duree_fenetre_minutes",
+    "duree_coupure_min_minutes",
+    "duree_coupure_max_minutes",
+    "communes_concernees",
+    "services",
+    "impact"
+  ],
+  "title": "Maintenance",
+  "type": "object"
+}

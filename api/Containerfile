@@ -1,0 +1,37 @@
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+
+WORKDIR /app
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    HELIA_USE_DB=1 \
+    HELIA_DB_PATH=/data/helia.db \
+    HELIA_SCRAPE_INTERVAL_MINUTES=15
+
+# Dépendances en premier pour bénéficier du cache Docker
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+# Code source
+COPY helia_etat_reseaux/ helia_etat_reseaux/
+COPY api/ api/
+COPY streamlit_app.py ./
+
+RUN uv sync --frozen --no-dev
+
+# Données persistantes (montez un volume Docker sur /data)
+VOLUME ["/data"]
+
+EXPOSE 8000 8501
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+
+# supervisord lance FastAPI + Streamlit en parallèle
+RUN apt-get update -qq && apt-get install -y --no-install-recommends supervisor && rm -rf /var/lib/apt/lists/*
+
+COPY docker/supervisord.conf /etc/supervisor/conf.d/helia.conf
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/helia.conf"]

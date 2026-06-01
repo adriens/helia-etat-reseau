@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  helia:
+    build:
+      context: .
+      dockerfile: api/Containerfile
+    ports:
+      - "8000:8000"   # FastAPI + /metrics
+      - "8501:8501"   # Streamlit
+    volumes:
+      - helia_data:/data
+    environment:
+      HELIA_USE_DB: "1"
+      HELIA_DB_PATH: /data/helia.db
+      HELIA_SCRAPE_INTERVAL_MINUTES: "15"   # override ici
+      # OpenTelemetry — activer avec OTEL_ENABLED=1 et pointer vers un collector
+      OTEL_ENABLED: "0"
+      OTEL_SERVICE_NAME: helia-nc-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_EXPORTER_PROTOCOL: http/protobuf
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: helia
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    restart: unless-stopped
+
+volumes:
+  helia_data:
+  prometheus_data:
+  grafana_data:
