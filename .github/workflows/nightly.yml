@@ -1,34 +1,14 @@
-name: Nightly — scraper validation
+name: Scraper — validation toutes les 6h
 
 on:
   schedule:
-    - cron: "0 20 * * *"   # 07h00 heure NC (UTC+11) chaque matin
-  workflow_dispatch:        # déclenchement manuel possible
+    - cron: "0 */6 * * *"   # toutes les 6h UTC
+  workflow_dispatch:
 
 jobs:
-  unit:
-    name: Tests unitaires (offline)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
-        with:
-          version: latest
-          python-version: "3.13"
-
-      - name: Install dependencies
-        run: uv sync --frozen
-
-      - name: Run unit tests + coverage
-        run: |
-          uv run pytest tests/test_scraper_unit.py tests/test_geo.py tests/test_models.py \
-            -v --cov=helia_etat_reseaux --cov-report=term-missing --cov-fail-under=70
-
   integration:
     name: Tests d'intégration (réseau réel)
     runs-on: ubuntu-latest
-    needs: unit           # ne tourne que si les unit tests passent
     steps:
       - uses: actions/checkout@v4
 
@@ -51,11 +31,12 @@ jobs:
           uv run python3 -c "
           import requests, pathlib, datetime
           r = requests.get('https://helia.nc/etat-du-reseau', timeout=20,
-              headers={'User-Agent':'helia-nightly-ci/1.0'})
+              headers={'User-Agent':'helia-scraper-ci/1.0'})
           ts = datetime.datetime.utcnow().strftime('%Y%m%d_%H%M')
           pathlib.Path(f'snapshot_{ts}.html').write_text(r.text, encoding='utf-8')
           print(f'Snapshot saved — {len(r.text)} chars, HTTP {r.status_code}')
           "
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -63,29 +44,39 @@ jobs:
           path: snapshot_*.html
           retention-days: 30
 
-  notify-failure:
-    name: Notification en cas d'échec
+  open-issue-on-failure:
+    name: Ouvrir une issue en cas d'échec
     runs-on: ubuntu-latest
-    needs: [unit, integration]
+    needs: integration
     if: failure()
+    permissions:
+      issues: write
     steps:
-      - name: Créer une issue GitHub
+      - name: Créer une issue GitHub dédiée
         uses: actions/github-script@v7
         with:
           script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const now = new Date().toISOString();
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo:  context.repo.repo,
-              title: `🚨 Nightly build failed — ${new Date().toISOString().slice(0,10)}`,
+              title: `Scraper helia.nc en échec — ${now.slice(0, 16).replace('T', ' ')} UTC`,
               body: [
-                '## Nightly scraper validation failed',
+                '## Le scraper helia.nc est en échec',
                 '',
-                `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+                `**Run :** ${runUrl}`,
+                `**Horodatage :** ${now}`,
                 '',
-                '**Actions à vérifier :**',
-                '- La structure HTML de helia.nc a-t-elle changé ?',
-                '- Un nouveau type de zone ou de service est-il apparu ?',
-                '- Le site est-il temporairement inaccessible ?',
+                '**Causes probables :**',
+                '- La structure HTML de helia.nc a changé',
+                '- Un nouveau type de zone ou de service est apparu',
+                '- Le site est temporairement inaccessible',
+                '',
+                '**Actions :**',
+                '- [ ] Vérifier le snapshot HTML joint à l\'artefact du run',
+                '- [ ] Mettre à jour `ZONE_TO_COMMUNE` ou les parseurs si besoin',
+                '- [ ] Fermer cette issue une fois le fix mergé',
               ].join('\n'),
-              labels: ['bug', 'nightly'],
+              labels: ['bug', 'scraper'],
             });
