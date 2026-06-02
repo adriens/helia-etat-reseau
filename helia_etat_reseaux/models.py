@@ -110,6 +110,14 @@ class CommuneGeoPoint(BaseModel):
     commune: str = Field(description="Nom officiel de la commune.")
     lat: float = Field(description="Latitude du centroïde (WGS 84).")
     lon: float = Field(description="Longitude du centroïde (WGS 84).")
+    population: int | None = Field(
+        None,
+        description=(
+            "Population municipale (1) lors du dernier recensement ISEE disponible (2019). "
+            "Source : data.gouv.nc — `population-legale-de-la-nouvelle-caledonie`, "
+            "jointure sur `commune_maj`. `null` si commune absente du référentiel."
+        ),
+    )
 
 
 class Impact(StrEnum):
@@ -368,9 +376,15 @@ class Maintenance(BaseModel):
     @property
     def communes_geopoints(self) -> list[CommuneGeoPoint]:
         from .geo import COMMUNE_CENTROIDS
+        from .population import COMMUNE_POPULATION
 
         return [
-            CommuneGeoPoint(commune=c, lat=COMMUNE_CENTROIDS[c][0], lon=COMMUNE_CENTROIDS[c][1])
+            CommuneGeoPoint(
+                commune=c,
+                lat=COMMUNE_CENTROIDS[c][0],
+                lon=COMMUNE_CENTROIDS[c][1],
+                population=COMMUNE_POPULATION.get(c),
+            )
             for c in self.communes_concernees
             if c in COMMUNE_CENTROIDS
         ]
