@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
 
@@ -92,6 +92,21 @@ class Service(StrEnum):
             "LIAISONS_CELERIS_ETHERNET": "Liaisons Ethernet dédiées Céléris (offres entreprises)",
         }
         return js
+
+
+class GeoPoint(BaseModel):
+    """Coordonnées géographiques — compatible champ `geo_point` OpenSearch."""
+
+    lat: float = Field(description="Latitude en degrés décimaux (WGS 84).")
+    lon: float = Field(description="Longitude en degrés décimaux (WGS 84).")
+
+
+class CommuneGeoPoint(BaseModel):
+    """Centroïde d'une commune NC — compatible champ `nested` + `geo_point` OpenSearch."""
+
+    commune: str = Field(description="Nom officiel de la commune.")
+    lat: float = Field(description="Latitude du centroïde (WGS 84).")
+    lon: float = Field(description="Longitude du centroïde (WGS 84).")
 
 
 class Impact(StrEnum):
@@ -329,3 +344,35 @@ class Maintenance(BaseModel):
         if self.timestamp_fin <= self.timestamp_debut:
             raise ValueError("timestamp_fin <= timestamp_debut")
         return self
+
+    @computed_field(
+        description=(
+            "Centroïdes des communes concernées — un point par commune. "
+            "Mapper en `nested` + `geo_point` dans OpenSearch."
+        )
+    )
+    @property
+    def communes_geopoints(self) -> list[CommuneGeoPoint]:
+        from .geo import COMMUNE_CENTROIDS
+
+        return [
+            CommuneGeoPoint(commune=c, lat=COMMUNE_CENTROIDS[c][0], lon=COMMUNE_CENTROIDS[c][1])
+            for c in self.communes_concernees
+            if c in COMMUNE_CENTROIDS
+        ]
+
+    @computed_field(
+        description=(
+            "Centroïde moyen de la maintenance (moyenne des centroïdes des communes impactées). "
+            "Mapper en `geo_point` dans OpenSearch pour les requêtes de proximité."
+        )
+    )
+    @property
+    def centroide(self) -> GeoPoint:
+        from .geo import COMMUNE_CENTROIDS
+
+        pts = [COMMUNE_CENTROIDS[c] for c in self.communes_concernees if c in COMMUNE_CENTROIDS]
+        return GeoPoint(
+            lat=sum(p[0] for p in pts) / len(pts),
+            lon=sum(p[1] for p in pts) / len(pts),
+        )
