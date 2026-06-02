@@ -37,7 +37,7 @@ jobs:
           print(f'Snapshot saved — {len(r.text)} chars, HTTP {r.status_code}')
           "
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: helia-snapshot-${{ github.run_id }}
