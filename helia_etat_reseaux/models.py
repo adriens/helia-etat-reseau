@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timezone, timedelta
 from enum import StrEnum
 from typing import Annotated, Any
 
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema
+
+_NC_TZ = timezone(timedelta(hours=11))
 
 
 class Province(StrEnum):
@@ -344,6 +347,17 @@ class Maintenance(BaseModel):
         if self.timestamp_fin <= self.timestamp_debut:
             raise ValueError("timestamp_fin <= timestamp_debut")
         return self
+
+    @computed_field(
+        description=(
+            "Horodatage du scrape en heure locale Nouvelle-Calédonie (UTC+11), "
+            "au format ISO 8601. Pratique pour l'affichage et le filtrage côté NC."
+        )
+    )
+    @property
+    def scraped_at_local(self) -> str:
+        dt_utc = datetime.strptime(self.scraped_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+        return dt_utc.astimezone(_NC_TZ).isoformat()
 
     @computed_field(
         description=(
