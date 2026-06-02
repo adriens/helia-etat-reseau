@@ -9,6 +9,22 @@ permissions:
   contents: write
 
 jobs:
+  publish-pypi:
+    name: Publier sur PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Build
+        run: uv build
+
+      - name: Publish
+        run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.UV_PUBLISH_TOKEN }}
+
   release:
     name: Créer la release GitHub
     runs-on: ubuntu-latest
