@@ -42,9 +42,7 @@ class TestScraperLive:
     def test_no_unknown_zones(self):
         """Aucune zone brute ne doit être inconnue du mapping ZONE_TO_COMMUNE."""
         unknowns = [
-            (m.id, m.zones_non_reconnues)
-            for m in scrape_maintenances()
-            if m.zones_non_reconnues
+            (m.id, m.zones_non_reconnues) for m in scrape_maintenances() if m.zones_non_reconnues
         ]
         assert not unknowns, (
             "Zones inconnues détectées — mettre à jour ZONE_TO_COMMUNE dans scraper.py :\n"

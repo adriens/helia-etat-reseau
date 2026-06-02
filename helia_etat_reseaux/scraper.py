@@ -360,5 +360,7 @@ def scrape_maintenances(url: str = SOURCE_URL) -> list[Maintenance]:
         try:
             results.append(_transform(item, scraped_at))
         except Exception as exc:
-            log.warning("Item ignoré (parsing échoué) — %s: %s | item=%r", type(exc).__name__, exc, item)
+            log.warning(
+                "Item ignoré (parsing échoué) — %s: %s | item=%r", type(exc).__name__, exc, item
+            )
     return results
