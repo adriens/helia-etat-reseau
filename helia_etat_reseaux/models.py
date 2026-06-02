@@ -326,6 +326,18 @@ class Maintenance(BaseModel):
             ),
         ),
     ]
+    zones_non_reconnues: Annotated[
+        list[str] | None,
+        Field(
+            default=None,
+            description=(
+                "Zones brutes du texte source absentes du dictionnaire `ZONE_TO_COMMUNE`. "
+                "`null` si toutes les zones ont été reconnues. "
+                "La présence de cette liste indique que `communes_concernees` est "
+                "possiblement incomplète — une mise à jour de `ZONE_TO_COMMUNE` est requise."
+            ),
+        ),
+    ] = None
 
     @field_validator("communes_concernees")
     @classmethod
