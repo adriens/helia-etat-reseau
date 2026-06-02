@@ -227,9 +227,9 @@ def _parse_zone_field(zone_str: str) -> list[str]:
     return _split_zones(zone_str)
 
 
-def _zones_to_communes(zones: list[str]) -> list[str]:
+def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
     if "Nouvelle-Calédonie" in zones:
-        return ALL_COMMUNES[:]
+        return ALL_COMMUNES[:], []
     communes: list[str] = []
     unknown: list[str] = []
     for z in zones:
@@ -238,9 +238,7 @@ def _zones_to_communes(zones: list[str]) -> list[str]:
             unknown.append(z)
         elif commune not in communes:
             communes.append(commune)
-    if unknown:
-        raise ValueError(f"Zones sans mapping : {unknown}")
-    return communes
+    return communes, unknown
 
 
 def _extract_services(text: str) -> list[str]:
@@ -309,7 +307,9 @@ def _transform(item: dict, scraped_at: str) -> Maintenance:
     ts_debut = _to_iso(start, h_d, m_d)
     ts_fin = _to_iso(fin_date, h_f, m_f)
 
-    communes = _zones_to_communes(_parse_zone_field(zone_raw))
+    communes, unknown_zones = _zones_to_communes(_parse_zone_field(zone_raw))
+    if not communes:
+        raise ValueError(f"Aucune commune reconnue — zones brutes : {_parse_zone_field(zone_raw)}")
     services, impact = _parse_impacts(impacts_raw)
 
     duree_fenetre = int(
@@ -338,6 +338,7 @@ def _transform(item: dict, scraped_at: str) -> Maintenance:
         impact=impact,
         nb_communes_concernees=len(communes),
         est_toute_nc=len(communes) == len(COMMUNES_OFFICIELLES),
+        zones_non_reconnues=unknown_zones or None,
         provinces_concernees=provinces,
     )
 
@@ -348,7 +349,16 @@ def _transform(item: dict, scraped_at: str) -> Maintenance:
 
 
 def scrape_maintenances(url: str = SOURCE_URL) -> list[Maintenance]:
+    import logging
+
+    log = logging.getLogger(__name__)
     scraped_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     html = fetch_html(url)
     items = parse_items(html)
-    return [_transform(item, scraped_at) for item in items]
+    results: list[Maintenance] = []
+    for item in items:
+        try:
+            results.append(_transform(item, scraped_at))
+        except Exception as exc:
+            log.warning("Item ignoré (parsing échoué) — %s: %s | item=%r", type(exc).__name__, exc, item)
+    return results
