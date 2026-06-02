@@ -101,6 +101,26 @@ class TestMaintenanceInvalid:
             )
 
 
+class TestCommuneGeoPointPopulation:
+    def test_population_present(self):
+        m = Maintenance.model_validate(VALID)
+        gp = m.communes_geopoints[0]
+        assert gp.commune == "NOUMEA"
+        assert gp.population == 94285
+
+    def test_population_all_communes_covered(self):
+        from helia_etat_reseaux.models import COMMUNES_OFFICIELLES
+        from helia_etat_reseaux.population import COMMUNE_POPULATION
+
+        missing = COMMUNES_OFFICIELLES - COMMUNE_POPULATION.keys()
+        assert not missing, f"Communes sans population : {missing}"
+
+    def test_population_positive(self):
+        from helia_etat_reseaux.population import COMMUNE_POPULATION
+
+        assert all(v > 0 for v in COMMUNE_POPULATION.values())
+
+
 class TestEnums:
     def test_all_services_defined(self):
         expected = {
