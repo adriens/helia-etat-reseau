@@ -23,7 +23,16 @@ jobs:
       - name: Run integration tests against helia.nc
         run: |
           uv run pytest tests/test_scraper_integration.py \
-            --run-integration -v --tb=short
+            --run-integration -v --tb=long 2>&1 | tee pytest-integration.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload pytest log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pytest-log-${{ github.run_id }}
+          path: pytest-integration.log
+          retention-days: 7
 
       - name: Snapshot HTML fixture (artefact de référence)
         if: always()
@@ -52,31 +61,64 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Créer une issue GitHub dédiée
+      - name: Download pytest log
+        uses: actions/download-artifact@v4
+        with:
+          name: pytest-log-${{ github.run_id }}
+          path: .
+        continue-on-error: true
+
+      - name: Créer une issue GitHub avec stack trace
         uses: actions/github-script@v9
         with:
           script: |
+            const fs = require('fs');
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const now = new Date().toISOString();
+
+            let log = '(log indisponible)';
+            try {
+              const raw = fs.readFileSync('pytest-integration.log', 'utf8');
+              // Garder les 5000 derniers caractères pour rester sous la limite GitHub
+              log = raw.length > 5000 ? '…(tronqué)\n' + raw.slice(-5000) : raw;
+            } catch (_) {}
+
+            // Extraire les lignes FAILED et les blocs d'erreur pour le titre
+            const failedLines = (log.match(/^FAILED .+/mg) ?? []).slice(0, 3).join('\n') || 'échec inconnu';
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo:  context.repo.repo,
-              title: `Scraper helia.nc en échec — ${now.slice(0, 16).replace('T', ' ')} UTC`,
+              title: `🚨 Scraper helia.nc en échec — ${now.slice(0, 16).replace('T', ' ')} UTC`,
               body: [
-                '## Le scraper helia.nc est en échec',
+                '## Tests d\'intégration en échec',
                 '',
-                `**Run :** ${runUrl}`,
+                `**Run CI :** ${runUrl}`,
                 `**Horodatage :** ${now}`,
                 '',
+                '**Tests en échec :**',
+                '```',
+                failedLines,
+                '```',
+                '',
                 '**Causes probables :**',
-                '- La structure HTML de helia.nc a changé',
-                '- Un nouveau type de zone ou de service est apparu',
-                '- Le site est temporairement inaccessible',
+                '- Nouvelle zone/quartier apparu sur helia.nc absent de `ZONE_TO_COMMUNE`',
+                '- Structure HTML de la page modifiée',
+                '- Site temporairement inaccessible',
+                '',
+                '**Stack trace complète :**',
+                '<details>',
+                '<summary>Afficher le log pytest</summary>',
+                '',
+                '```',
+                log,
+                '```',
+                '</details>',
                 '',
                 '**Actions :**',
-                '- [ ] Vérifier le snapshot HTML joint à l\'artefact du run',
-                '- [ ] Mettre à jour `ZONE_TO_COMMUNE` ou les parseurs si besoin',
-                '- [ ] Fermer cette issue une fois le fix mergé',
+                '- [ ] Identifier la zone/erreur dans le log ci-dessus',
+                '- [ ] Corriger `ZONE_TO_COMMUNE` ou le parseur dans `scraper.py`',
+                '- [ ] Fermer cette issue après merge du fix',
               ].join('\n'),
               labels: ['bug', 'scraper'],
             });
