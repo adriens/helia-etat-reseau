@@ -54,6 +54,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Plum": "MONT-DORE",
     "Cosmogolf": "MONT-DORE",
     "Koghis": "MONT-DORE",
+    "Nouméa": "NOUMEA",
     "Nouméa (Val Plaisance, Anse-Vata)": "NOUMEA",
     "Boulari": "NOUMEA",
     "Robinson": "NOUMEA",
