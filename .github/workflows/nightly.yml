@@ -1,8 +1,8 @@
-name: Scraper — validation toutes les 6h
+name: Scraper — validation toutes les 3h
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # toutes les 6h UTC
+    - cron: "0 */3 * * *"   # toutes les 3h UTC
   workflow_dispatch:
 
 jobs:
