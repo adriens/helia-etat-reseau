@@ -81,6 +81,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Zico": "DUMBEA",
     "Koutio": "DUMBEA",
     "Apogoti": "DUMBEA",
+    "Apogotti": "DUMBEA",
     "Néméara": "BOURAIL",
     "Paya": "BOURAIL",
     "Nessadiou": "BOURAIL",
@@ -188,11 +189,17 @@ def parse_items(html: str) -> list[dict]:
 
 def _parse_date_range(date_str: str) -> tuple[date, date]:
     range_m = re.match(r"^(\d+)\s+au\s+(\d+)\s+(\S+)\s+(\d+)$", date_str)
+    list_m = re.match(r"^(\d+(?:-\d+)+)\s+(\S+)\s+(\d+)$", date_str)
     single_m = re.match(r"^(\d+)\s+(\S+)\s+(\d+)$", date_str)
     if range_m:
         d1, d2, month_name, year = range_m.groups()
         m = MONTHS[month_name]
         return date(int(year), m, int(d1)), date(int(year), m, int(d2))
+    if list_m:
+        days_str, month_name, year = list_m.groups()
+        days = [int(d) for d in days_str.split("-")]
+        m = MONTHS[month_name]
+        return date(int(year), m, min(days)), date(int(year), m, max(days))
     if single_m:
         d, month_name, year = single_m.groups()
         m = MONTHS[month_name]
@@ -240,6 +247,11 @@ def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
     unknown: list[str] = []
     for z in zones:
         commune = ZONE_TO_COMMUNE.get(z)
+        if commune is None:
+            # Retente sans le suffixe parenthésé : "Koutio (Rue Becquerel)" -> "Koutio"
+            base = re.sub(r"\s*\(.*\)\s*$", "", z).strip()
+            if base != z:
+                commune = ZONE_TO_COMMUNE.get(base)
         if commune is None:
             unknown.append(z)
         elif commune not in communes:
