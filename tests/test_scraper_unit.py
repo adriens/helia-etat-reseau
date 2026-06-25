@@ -8,7 +8,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from helia_etat_reseaux.models import COMMUNES_OFFICIELLES, Impact, Province, Service
-from helia_etat_reseaux.scraper import _split_zones, _to_iso, parse_items, scrape_maintenances
+from helia_etat_reseaux.scraper import (
+    _parse_date_range,
+    _split_zones,
+    _to_iso,
+    _zones_to_communes,
+    parse_items,
+    scrape_maintenances,
+)
 
 # ── _split_zones ──────────────────────────────────────────────────────────────
 
@@ -41,6 +48,60 @@ class TestSplitZones:
     def test_nbsp_normalized(self):
         result = _split_zones("NOUMEA\xa0, DUMBEA")
         assert result == ["NOUMEA", "DUMBEA"]
+
+
+# ── _zones_to_communes ────────────────────────────────────────────────────────
+
+
+class TestZonesToCommunes:
+    def test_exact_match(self):
+        communes, unknown = _zones_to_communes(["Koutio"])
+        assert communes == ["DUMBEA"]
+        assert unknown == []
+
+    def test_parenthetical_suffix_stripped(self):
+        """Un suffixe parenthésé (rue/tribu) ne doit pas empêcher la reconnaissance."""
+        communes, unknown = _zones_to_communes(["Koutio (Rue Becquerel)"])
+        assert communes == ["DUMBEA"]
+        assert unknown == []
+
+    def test_parenthetical_commune(self):
+        communes, unknown = _zones_to_communes(["La Foa (Pocquereux)"])
+        assert communes == ["LA FOA"]
+        assert unknown == []
+
+    def test_apogotti_variant(self):
+        """Variante orthographique 'Apogotti' (deux t) reconnue comme Dumbéa."""
+        communes, unknown = _zones_to_communes(["Apogotti"])
+        assert communes == ["DUMBEA"]
+        assert unknown == []
+
+    def test_genuinely_unknown_zone(self):
+        communes, unknown = _zones_to_communes(["ZoneInexistante"])
+        assert communes == []
+        assert unknown == ["ZoneInexistante"]
+
+
+# ── _parse_date_range ─────────────────────────────────────────────────────────
+
+
+class TestParseDateRange:
+    def test_single_day(self):
+        assert _parse_date_range("16 juillet 2026") == (date(2026, 7, 16), date(2026, 7, 16))
+
+    def test_au_range(self):
+        assert _parse_date_range("2 au 4 juillet 2026") == (date(2026, 7, 2), date(2026, 7, 4))
+
+    def test_dash_list(self):
+        """Liste de jours '7-8-9 juillet 2026' -> plage du 1er au dernier."""
+        assert _parse_date_range("7-8-9 juillet 2026") == (date(2026, 7, 7), date(2026, 7, 9))
+
+    def test_dash_pair(self):
+        assert _parse_date_range("7-8 juillet 2026") == (date(2026, 7, 7), date(2026, 7, 8))
+
+    def test_unparseable_raises(self):
+        with pytest.raises(ValueError, match="Date non parseable"):
+            _parse_date_range("la semaine prochaine")
 
 
 # ── _to_iso ───────────────────────────────────────────────────────────────────
