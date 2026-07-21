@@ -112,6 +112,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Nékou": "POYA",
     "Couli": "MOINDOU",
     "Touho": "TOUHO",
+    "Yaté": "YATE",
 }
 
 MONTHS = {
