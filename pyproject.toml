@@ -1,6 +1,6 @@
 [project]
 name = "helia-etat-reseaux"
-version = "0.6.6"
+version = "0.6.7"
 description = "Scraper des maintenances programmées Helia NC (helia.nc/etat-du-reseau)"
 license = { text = "LGPL-3.0-or-later" }
 readme = "README.md"
