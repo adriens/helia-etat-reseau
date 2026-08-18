@@ -9,6 +9,7 @@ import pytest
 
 from helia_etat_reseaux.models import COMMUNES_OFFICIELLES, Impact, Province, Service
 from helia_etat_reseaux.scraper import (
+    _infer_year,
     _parse_date_range,
     _split_zones,
     _to_iso,
@@ -102,6 +103,58 @@ class TestParseDateRange:
     def test_unparseable_raises(self):
         with pytest.raises(ValueError, match="Date non parseable"):
             _parse_date_range("la semaine prochaine")
+
+    def test_du_prefix_and_repeated_month(self):
+        """'Du 17 août au 19 août' — préfixe 'Du', mois répété, année absente."""
+        start, end = _parse_date_range("Du 17 août au 19 août")
+        assert (start.day, start.month) == (17, 8)
+        assert (end.day, end.month) == (19, 8)
+        assert start.year == end.year
+
+    def test_cross_month_range(self):
+        assert _parse_date_range("30 août au 2 septembre 2026") == (
+            date(2026, 8, 30),
+            date(2026, 9, 2),
+        )
+
+    def test_year_defaults_to_current(self):
+        start, _ = _parse_date_range("16 juillet")
+        assert start == date(date.today().year, 7, 16)
+
+    def test_unknown_month_raises(self):
+        with pytest.raises(ValueError, match="Mois inconnu"):
+            _parse_date_range("3 brumaire 2026")
+
+
+class TestZonesParenthesees:
+    def test_paren_holds_the_commune(self):
+        """'Tendéa (Farino)' — la parenthèse porte la commune, pas un détail."""
+        communes, unknown = _zones_to_communes(["Tendéa (Farino)"])
+        assert communes == ["FARINO"]
+        assert unknown == []
+
+    def test_paren_holds_a_detail(self):
+        """Le cas inverse reste géré : la base l'emporte."""
+        communes, unknown = _zones_to_communes(["Koutio (Rue Becquerel)"])
+        assert communes == ["DUMBEA"]
+        assert unknown == []
+
+    def test_both_unknown_stays_unknown(self):
+        communes, unknown = _zones_to_communes(["Zorglub (Zorglubville)"])
+        assert communes == []
+        assert unknown == ["Zorglub (Zorglubville)"]
+
+
+class TestInferYear:
+    def test_same_month_stays_current_year(self):
+        assert _infer_year(8, today=date(2026, 8, 19)) == 2026
+
+    def test_recent_past_stays_current_year(self):
+        assert _infer_year(7, today=date(2026, 8, 19)) == 2026
+
+    def test_december_to_january_rolls_over(self):
+        """En décembre, un « janvier » annoncé vise l'année suivante."""
+        assert _infer_year(1, today=date(2026, 12, 20)) == 2027
 
 
 # ── _to_iso ───────────────────────────────────────────────────────────────────

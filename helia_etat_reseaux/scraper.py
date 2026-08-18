@@ -33,6 +33,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Paita": "PAITA",
     "Païta": "PAITA",
     "Farino": "FARINO",
+    "Pic Boucher": "FARINO",
     "Dumbéa": "DUMBEA",
     "Lifou": "LIFOU",
     "Ouvéa": "OUVEA",
@@ -64,6 +65,11 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Kaméré": "NOUMEA",
     "PK4": "NOUMEA",
     "Tina": "NOUMEA",
+    "Tuband": "NOUMEA",
+    "Vallée des colons": "NOUMEA",
+    "Vallée des Colons": "NOUMEA",
+    "Point aux Longs Cous": "NOUMEA",
+    "Pointe aux Longs Cous": "NOUMEA",
     "Tamoa": "PAITA",
     "Tontouta": "PAITA",
     "Katiramona": "PAITA",
@@ -190,23 +196,48 @@ def parse_items(html: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+def _month_num(month_name: str) -> int:
+    m = MONTHS.get(month_name.lower())
+    if m is None:
+        raise ValueError(f"Mois inconnu : {month_name!r}")
+    return m
+
+
+def _infer_year(month: int, today: date | None = None) -> int:
+    """Année implicite quand la source l'omet.
+
+    L'année courante, ou la suivante si le mois est nettement passé — les
+    maintenances annoncées sont à venir (bascule décembre → janvier).
+    """
+    today = today or date.today()
+    return today.year + 1 if month < today.month - 6 else today.year
+
+
 def _parse_date_range(date_str: str) -> tuple[date, date]:
-    range_m = re.match(r"^(\d+)\s+au\s+(\d+)\s+(\S+)\s+(\d+)$", date_str)
-    list_m = re.match(r"^(\d+(?:-\d+)+)\s+(\S+)\s+(\d+)$", date_str)
-    single_m = re.match(r"^(\d+)\s+(\S+)\s+(\d+)$", date_str)
+    # « Du 17 août au 19 août » : préfixe et année sont optionnels sur helia.nc
+    date_str = re.sub(r"^[Dd]u\s+", "", date_str.strip())
+    range_m = re.match(r"^(\d+)(?:\s+(\S+))?\s+au\s+(\d+)\s+(\S+)(?:\s+(\d+))?$", date_str)
+    list_m = re.match(r"^(\d+(?:-\d+)+)\s+(\S+)(?:\s+(\d+))?$", date_str)
+    single_m = re.match(r"^(\d+)\s+(\S+)(?:\s+(\d+))?$", date_str)
     if range_m:
-        d1, d2, month_name, year = range_m.groups()
-        m = MONTHS[month_name]
-        return date(int(year), m, int(d1)), date(int(year), m, int(d2))
+        d1, month1_name, d2, month2_name, year = range_m.groups()
+        m2 = _month_num(month2_name)
+        m1 = _month_num(month1_name) if month1_name else m2
+        y2 = int(year) if year else _infer_year(m2)
+        # « 30 décembre au 2 janvier » : le début est sur l'année précédente
+        y1 = y2 - 1 if m1 > m2 else y2
+        return date(y1, m1, int(d1)), date(y2, m2, int(d2))
     if list_m:
         days_str, month_name, year = list_m.groups()
         days = [int(d) for d in days_str.split("-")]
-        m = MONTHS[month_name]
-        return date(int(year), m, min(days)), date(int(year), m, max(days))
+        m = _month_num(month_name)
+        y = int(year) if year else _infer_year(m)
+        return date(y, m, min(days)), date(y, m, max(days))
     if single_m:
         d, month_name, year = single_m.groups()
-        m = MONTHS[month_name]
-        s = date(int(year), m, int(d))
+        m = _month_num(month_name)
+        y = int(year) if year else _infer_year(m)
+        s = date(y, m, int(d))
         return s, s
     raise ValueError(f"Date non parseable : {date_str!r}")
 
@@ -255,6 +286,11 @@ def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
             base = re.sub(r"\s*\(.*\)\s*$", "", z).strip()
             if base != z:
                 commune = ZONE_TO_COMMUNE.get(base)
+        if commune is None:
+            # La parenthèse porte parfois la commune : "Tendéa (Farino)" -> "Farino"
+            paren = re.search(r"\(([^()]*)\)\s*$", z)
+            if paren:
+                commune = ZONE_TO_COMMUNE.get(paren.group(1).strip())
         if commune is None:
             unknown.append(z)
         elif commune not in communes:
