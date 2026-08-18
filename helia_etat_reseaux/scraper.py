@@ -80,6 +80,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Savannah": "DUMBEA",
     "Zico": "DUMBEA",
     "Koutio": "DUMBEA",
+    "Butte de Koutio": "DUMBEA",
     "Apogoti": "DUMBEA",
     "Apogotti": "DUMBEA",
     "Néméara": "BOURAIL",
