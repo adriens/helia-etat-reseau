@@ -120,6 +120,12 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Couli": "MOINDOU",
     "Touho": "TOUHO",
     "Yaté": "YATE",
+    "Malabou": "POUM",
+    "Karembe": "KOUMAC",
+    "Pouebo": "POUEBO",
+    "Poum": "POUM",
+    "Tiabet": "POUM",
+    "Belep": "BELEP",
 }
 
 MONTHS = {
@@ -275,7 +281,7 @@ def _parse_zone_field(zone_str: str) -> list[str]:
 
 
 def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
-    if "Nouvelle-Calédonie" in zones:
+    if "Nouvelle-Calédonie" in zones or "Tout le territoire" in zones:
         return ALL_COMMUNES[:], []
     communes: list[str] = []
     unknown: list[str] = []
