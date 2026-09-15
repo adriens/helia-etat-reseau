@@ -1,0 +1,57 @@
+name: Label PR depuis le titre
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  label:
+    name: Applique le label depuis le type de commit sémantique
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déduire et poser le label
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const title = context.payload.pull_request.title;
+            const match = title.match(/^(\w+)(\([^)]*\))?!?:/);
+            if (!match) {
+              core.info(`Titre "${title}" ne suit pas la convention <type>(<scope>): ..., aucun label posé.`);
+              return;
+            }
+
+            // Mappe les types Conventional Commits (voir CLAUDE.md) vers les labels
+            // utilisés par .github/release.yml pour catégoriser les release notes.
+            const typeMap = {
+              feat: "feature",
+              fix: "fix",
+              chore: "chore",
+              docs: "documentation",
+              test: "testing",
+              ci: "ci",
+              build: "dependencies",
+            };
+            const label = typeMap[match[1]];
+            if (!label) {
+              core.info(`Type "${match[1]}" non mappé (refactor/perf...), aucun label posé.`);
+              return;
+            }
+
+            const issue_number = context.payload.pull_request.number;
+            const { owner, repo } = context.repo;
+
+            const managed = new Set(Object.values(typeMap));
+            const { data: current } = await github.rest.issues.listLabelsOnIssue({
+              owner, repo, issue_number,
+            });
+            for (const l of current) {
+              if (managed.has(l.name) && l.name !== label) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name: l.name });
+              }
+            }
+            await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [label] });
+            core.info(`Label "${label}" posé sur la PR #${issue_number}.`);
