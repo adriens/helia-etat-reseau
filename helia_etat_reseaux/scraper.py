@@ -17,6 +17,7 @@ ALL_COMMUNES = sorted(COMMUNES_OFFICIELLES)
 
 ZONE_TO_COMMUNE: dict[str, str] = {
     "Houailou": "HOUAILOU",
+    "Houaïlou": "HOUAILOU",
     "Poindimié": "POINDIMIE",
     "Ponerihouen": "PONERIHOUEN",
     "Ponérihouen": "PONERIHOUEN",
@@ -68,6 +69,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Tuband": "NOUMEA",
     "Vallée des colons": "NOUMEA",
     "Vallée des Colons": "NOUMEA",
+    "Magenta": "NOUMEA",
     "Point aux Longs Cous": "NOUMEA",
     "Pointe aux Longs Cous": "NOUMEA",
     "Tamoa": "PAITA",
@@ -117,9 +119,20 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Népoui": "POYA",
     "Nepoui": "POYA",
     "Nékou": "POYA",
+    "Netea": "POYA",
+    "Nepou 2": "POYA",
+    "Col des Citrons": "POYA",
+    "Kradji": "POYA",
+    "Gohapin": "POYA",
+    "Nekiai": "POYA",
+    "Beaupré": "BOURAIL",
+    "Cap": "BOURAIL",
+    "Poo": "BOURAIL",
     "Couli": "MOINDOU",
     "Touho": "TOUHO",
     "Yaté": "YATE",
+    "Thio": "THIO",
+    "Canala": "CANALA",
     "Malabou": "POUM",
     "Karembe": "KOUMAC",
     "Pouebo": "POUEBO",
@@ -255,6 +268,8 @@ def _parse_time(s: str) -> tuple[int, int]:
 
 
 def _split_zones(zones_str: str) -> list[str]:
+    # Virgule parfois remplacée par un &nbsp; sur helia.nc : "Gohapin  Nekiai"
+    zones_str = re.sub(r" {2,}", ",", zones_str.replace("\xa0", " "))
     depth, chars, i = 0, [], 0
     while i < len(zones_str):
         c = zones_str[i]
@@ -297,6 +312,12 @@ def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
             paren = re.search(r"\(([^()]*)\)\s*$", z)
             if paren:
                 commune = ZONE_TO_COMMUNE.get(paren.group(1).strip())
+        if commune is None and " - " in z:
+            # Qualificatif après un tiret : "Bourail - Beaupré", "Vallée des colons - Immeuble BOGEY"
+            for part in z.split(" - "):
+                commune = ZONE_TO_COMMUNE.get(part.strip())
+                if commune:
+                    break
         if commune is None:
             unknown.append(z)
         elif commune not in communes:
