@@ -153,14 +153,14 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Dumbéa sur mer": "DUMBEA",
     "pointe à la Dorade": "DUMBEA",
     "Zac Panda": "DUMBEA",
-    "Inco Base Vie": "YATE",
+    "Inco Base Vie": "MONT-DORE",
     "Tadine": "MARE",
     "La Roche": "MARE",
     "Fayaoué": "OUVEA",
     "Hapetra": "LIFOU",
     "Kedeigne": "LIFOU",
     "Mou": "LIFOU",
-    "Kouma": "KOUMAC",
+    "Kouma": "LA FOA",
     "Néoupi": "POYA",
 }
 
