@@ -100,6 +100,41 @@ class TestZonesToCommunes:
 
 
 class TestExtractServices:
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            (
+                "Ralentissement sur le réseau Internet Mobile et Fixe",
+                ["INTERNET_FIXE", "INTERNET_MOBILE"],
+            ),
+            (
+                "30 minutes de coupure sur l'Internet et la téléphonie Fixe fibre optique",
+                ["TELEPHONIE_FIXE", "INTERNET_FIXE", "FIBRE_OPTIQUE"],
+            ),
+            (
+                "Coupure des services de téléphonie et Internet Mobile et Fixe sur cuivre",
+                [
+                    "TELEPHONIE_FIXE",
+                    "INTERNET_FIXE",
+                    "TELEPHONIE_MOBILE",
+                    "INTERNET_MOBILE",
+                    "RESEAU_CUIVRE",
+                ],
+            ),
+            (
+                "Coupure de 30 min sur la téléphonie et l'Internet Mobile",
+                ["TELEPHONIE_MOBILE", "INTERNET_MOBILE"],
+            ),
+            (
+                "Téléphonie et Internet fixe et cuivre - Coupure de 20 à 30min",
+                ["TELEPHONIE_FIXE", "INTERNET_FIXE", "RESEAU_CUIVRE"],
+            ),
+            ("Coupure sur la téléphonie mobile de la zone", ["TELEPHONIE_MOBILE"]),
+        ],
+    )
+    def test_service_qualifier_lists(self, text, expected):
+        assert _extract_services(text) == expected
+
     def test_latence_maps_to_internet(self):
         assert _extract_services("Augmentation de la latence (20ms)") == [
             "INTERNET_FIXE",
