@@ -349,27 +349,47 @@ def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
     return communes, unknown
 
 
+# « téléphonie et Internet Mobile et Fixe », « l'Internet et la téléphonie Fixe » :
+# une liste de services suivie d'une liste de qualificatifs, à croiser
+_SERVICE_TERM = r"(?:l'|la\s+|le\s+)?(téléphonie|internet)"
+_SERVICE_QUALIF_RE = re.compile(
+    rf"({_SERVICE_TERM}(?:\s+et\s+{_SERVICE_TERM})*)\s+((?:mobile|fixe)(?:\s+et\s+(?:mobile|fixe))*)\b"
+)
+_SERVICE_ORDER = [
+    "TELEPHONIE_FIXE",
+    "INTERNET_FIXE",
+    "TELEPHONIE_MOBILE",
+    "INTERNET_MOBILE",
+    "RESEAU_CUIVRE",
+    "FIBRE_OPTIQUE",
+]
+
+
 def _extract_services(text: str) -> list[str]:
-    t = text.lower()
+    t = re.sub(r"\s+", " ", text.replace("\xa0", " ").lower())
     if "céléris" in t or "celeris" in t:
         return ["LIAISONS_CELERIS_ETHERNET"]
-    found = []
-    if "fixe" in t:
-        found.append("TELEPHONIE_FIXE")
-        if "internet fixe" in t:
-            found.append("INTERNET_FIXE")
-    if "mobile" in t:
-        found.append("TELEPHONIE_MOBILE")
-        if re.search(r"internet\s*(mobile|\xa0mobile)", t):
-            found.append("INTERNET_MOBILE")
+    found: set[str] = set()
+    for m in _SERVICE_QUALIF_RE.finditer(t):
+        services = re.findall(r"téléphonie|internet", m.group(1))
+        qualifs = re.findall(r"mobile|fixe", m.group(m.lastindex))
+        for svc in services:
+            for q in qualifs:
+                found.add(f"{'TELEPHONIE' if svc == 'téléphonie' else 'INTERNET'}_{q.upper()}")
+    if not found:
+        # Repli : formulations sans « service + qualificatif » explicite
+        if "fixe" in t:
+            found.add("TELEPHONIE_FIXE")
+        if "mobile" in t:
+            found.add("TELEPHONIE_MOBILE")
     if "cuivre" in t:
-        found.append("RESEAU_CUIVRE")
+        found.add("RESEAU_CUIVRE")
     if "fibre" in t:
-        found.append("FIBRE_OPTIQUE")
+        found.add("FIBRE_OPTIQUE")
     if not found and "latence" in t:
         # « Augmentation de la latence (20ms) » : dégradation de l'accès Internet
-        found += ["INTERNET_FIXE", "INTERNET_MOBILE"]
-    return found
+        found |= {"INTERNET_FIXE", "INTERNET_MOBILE"}
+    return [s for s in _SERVICE_ORDER if s in found]
 
 
 def _extract_impact(text: str | None) -> str:
