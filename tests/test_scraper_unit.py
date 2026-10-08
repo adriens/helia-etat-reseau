@@ -9,6 +9,7 @@ import pytest
 
 from helia_etat_reseaux.models import COMMUNES_OFFICIELLES, Impact, Province, Service
 from helia_etat_reseaux.scraper import (
+    _extract_services,
     _infer_year,
     _parse_date_range,
     _split_zones,
@@ -77,10 +78,33 @@ class TestZonesToCommunes:
         assert communes == ["DUMBEA"]
         assert unknown == []
 
+    def test_zones_octobre_2026(self):
+        """Zones apparues sur helia.nc début octobre 2026 (issues #94-#99)."""
+        zones = ["Mon-Dore", "Hienghène", "Sarraméa", "Tadine", "Fayaoué", "Hapetra", "PK5"]
+        communes, unknown = _zones_to_communes(zones)
+        assert communes == [
+            "MONT-DORE",
+            "HIENGHENE",
+            "SARRAMEA",
+            "MARE",
+            "OUVEA",
+            "LIFOU",
+            "NOUMEA",
+        ]
+        assert unknown == []
+
     def test_genuinely_unknown_zone(self):
         communes, unknown = _zones_to_communes(["ZoneInexistante"])
         assert communes == []
         assert unknown == ["ZoneInexistante"]
+
+
+class TestExtractServices:
+    def test_latence_maps_to_internet(self):
+        assert _extract_services("Augmentation de la latence (20ms)") == [
+            "INTERNET_FIXE",
+            "INTERNET_MOBILE",
+        ]
 
 
 # ── _parse_date_range ─────────────────────────────────────────────────────────
@@ -99,6 +123,13 @@ class TestParseDateRange:
 
     def test_dash_pair(self):
         assert _parse_date_range("7-8 juillet 2026") == (date(2026, 7, 7), date(2026, 7, 8))
+
+    def test_ampersand_pair(self):
+        """'07 & 08 octobre 2026' -> plage du 7 au 8."""
+        assert _parse_date_range("07 & 08 octobre 2026") == (
+            date(2026, 10, 7),
+            date(2026, 10, 8),
+        )
 
     def test_unparseable_raises(self):
         with pytest.raises(ValueError, match="Date non parseable"):

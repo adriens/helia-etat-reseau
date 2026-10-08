@@ -112,7 +112,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Arama": "POUM",
     "Tchamba": "PONERIHOUEN",
     "Coula": "PONERIHOUEN",
-    "Kédeigne": "PONERIHOUEN",
+    "Kédeigne": "LIFOU",
     "Kumo": "HIENGHENE",
     "Karikaté": "VOH",
     "Temala": "VOH",
@@ -139,6 +139,29 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Poum": "POUM",
     "Tiabet": "POUM",
     "Belep": "BELEP",
+    "Hienghène": "HIENGHENE",
+    "Mon-Dore": "MONT-DORE",
+    "Moindou": "MOINDOU",
+    "Kouaoua": "KOUAOUA",
+    "Sarraméa": "SARRAMEA",
+    "Porte de Fer": "NOUMEA",
+    "Galliéni": "NOUMEA",
+    "Nouville": "NOUMEA",
+    "PK5": "NOUMEA",
+    "Vélodrome": "NOUMEA",
+    "Ducos": "NOUMEA",
+    "Dumbéa sur mer": "DUMBEA",
+    "pointe à la Dorade": "DUMBEA",
+    "Zac Panda": "DUMBEA",
+    "Inco Base Vie": "YATE",
+    "Tadine": "MARE",
+    "La Roche": "MARE",
+    "Fayaoué": "OUVEA",
+    "Hapetra": "LIFOU",
+    "Kedeigne": "LIFOU",
+    "Mou": "LIFOU",
+    "Kouma": "KOUMAC",
+    "Néoupi": "POYA",
 }
 
 MONTHS = {
@@ -236,7 +259,8 @@ def _parse_date_range(date_str: str) -> tuple[date, date]:
     # « Du 17 août au 19 août » : préfixe et année sont optionnels sur helia.nc
     date_str = re.sub(r"^[Dd]u\s+", "", date_str.strip())
     range_m = re.match(r"^(\d+)(?:\s+(\S+))?\s+au\s+(\d+)\s+(\S+)(?:\s+(\d+))?$", date_str)
-    list_m = re.match(r"^(\d+(?:-\d+)+)\s+(\S+)(?:\s+(\d+))?$", date_str)
+    # « 7-8-9 juillet » ou « 07 & 08 octobre »
+    list_m = re.match(r"^(\d+(?:\s*[-&]\s*\d+)+)\s+(\S+)(?:\s+(\d+))?$", date_str)
     single_m = re.match(r"^(\d+)\s+(\S+)(?:\s+(\d+))?$", date_str)
     if range_m:
         d1, month1_name, d2, month2_name, year = range_m.groups()
@@ -248,7 +272,7 @@ def _parse_date_range(date_str: str) -> tuple[date, date]:
         return date(y1, m1, int(d1)), date(y2, m2, int(d2))
     if list_m:
         days_str, month_name, year = list_m.groups()
-        days = [int(d) for d in days_str.split("-")]
+        days = [int(d) for d in re.split(r"\s*[-&]\s*", days_str)]
         m = _month_num(month_name)
         y = int(year) if year else _infer_year(m)
         return date(y, m, min(days)), date(y, m, max(days))
@@ -342,6 +366,9 @@ def _extract_services(text: str) -> list[str]:
         found.append("RESEAU_CUIVRE")
     if "fibre" in t:
         found.append("FIBRE_OPTIQUE")
+    if not found and "latence" in t:
+        # « Augmentation de la latence (20ms) » : dégradation de l'accès Internet
+        found += ["INTERNET_FIXE", "INTERNET_MOBILE"]
     return found
 
 
