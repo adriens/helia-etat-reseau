@@ -465,7 +465,7 @@ wheels = [
 
 [[package]]
 name = "helia-etat-reseaux"
-version = "0.6.11"
+version = "0.6.12"
 source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
