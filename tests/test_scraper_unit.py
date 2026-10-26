@@ -135,6 +135,19 @@ class TestExtractServices:
     def test_service_qualifier_lists(self, text, expected):
         assert _extract_services(text) == expected
 
+    @pytest.mark.parametrize(
+        "text, expected",
+        [
+            ("Perturbation du services IMoD et recharges", ["IMOD", "RECHARGES"]),
+            (
+                "Pas de saisie possible (eSIM, revendeurs et CSNO)",
+                ["ESIM", "REVENDEURS", "CSNO"],
+            ),
+        ],
+    )
+    def test_commercial_services(self, text, expected):
+        assert _extract_services(text) == expected
+
     def test_latence_maps_to_internet(self):
         assert _extract_services("Augmentation de la latence (20ms)") == [
             "INTERNET_FIXE",

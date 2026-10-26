@@ -131,6 +131,11 @@ class TestEnums:
             "RESEAU_CUIVRE",
             "FIBRE_OPTIQUE",
             "LIAISONS_CELERIS_ETHERNET",
+            "IMOD",
+            "RECHARGES",
+            "ESIM",
+            "REVENDEURS",
+            "CSNO",
         }
         assert {s.value for s in Service} >= expected
 

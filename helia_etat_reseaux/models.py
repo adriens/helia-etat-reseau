@@ -80,6 +80,11 @@ class Service(StrEnum):
     FIBRE_OPTIQUE = "FIBRE_OPTIQUE"
     RESEAU_CUIVRE = "RESEAU_CUIVRE"
     LIAISONS_CELERIS_ETHERNET = "LIAISONS_CELERIS_ETHERNET"
+    IMOD = "IMOD"
+    RECHARGES = "RECHARGES"
+    ESIM = "ESIM"
+    REVENDEURS = "REVENDEURS"
+    CSNO = "CSNO"
 
     @classmethod
     def __get_pydantic_json_schema__(cls, schema: CoreSchema, handler: Any) -> JsonSchemaValue:
@@ -93,6 +98,11 @@ class Service(StrEnum):
             "FIBRE_OPTIQUE": "Réseau fibre optique",
             "RESEAU_CUIVRE": "Réseau cuivre (paires téléphoniques)",
             "LIAISONS_CELERIS_ETHERNET": "Liaisons Ethernet dédiées Céléris (offres entreprises)",
+            "IMOD": "Service IMoD",
+            "RECHARGES": "Recharges (crédit mobile)",
+            "ESIM": "Saisie / activation des eSIM",
+            "REVENDEURS": "Saisie côté revendeurs",
+            "CSNO": "Saisie côté CSNO",
         }
         return js
 
