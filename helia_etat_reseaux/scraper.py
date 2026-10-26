@@ -162,6 +162,17 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Mou": "LIFOU",
     "Kouma": "LA FOA",
     "Néoupi": "POYA",
+    "Tribus de Medu": "MARE",
+    "Tribu de Cengeite": "MARE",
+    "Tribus de Thogone": "MARE",
+    "Eni": "MARE",
+    "Wabao": "MARE",
+    "Ro": "MARE",
+    "Hôtel Nengone": "MARE",
+    "Kuendu beach": "MARE",
+    "Tiga": "MARE",
+    "Receiving": "NOUMEA",
+    "Motor-Pool": "NOUMEA",
 }
 
 MONTHS = {
@@ -487,9 +498,16 @@ def scrape_maintenances(url: str = SOURCE_URL) -> list[Maintenance]:
     html = fetch_html(url)
     items = parse_items(html)
     results: list[Maintenance] = []
+    seen: set[str] = set()
     for item in items:
         try:
-            results.append(_transform(item, scraped_at))
+            maintenance = _transform(item, scraped_at)
+            # Plusieurs lignes de zones distinctes (ex. tribus de Maré) peuvent donner
+            # le même créneau, les mêmes services et les mêmes communes : une seule suffit
+            if maintenance.id in seen:
+                continue
+            seen.add(maintenance.id)
+            results.append(maintenance)
         except Exception as exc:
             log.warning(
                 "Item ignoré (parsing échoué) — %s: %s | item=%r", type(exc).__name__, exc, item
