@@ -373,6 +373,11 @@ _SERVICE_ORDER = [
     "INTERNET_MOBILE",
     "RESEAU_CUIVRE",
     "FIBRE_OPTIQUE",
+    "IMOD",
+    "RECHARGES",
+    "ESIM",
+    "REVENDEURS",
+    "CSNO",
 ]
 
 
@@ -397,6 +402,18 @@ def _extract_services(text: str) -> list[str]:
         found.add("RESEAU_CUIVRE")
     if "fibre" in t:
         found.add("FIBRE_OPTIQUE")
+    # Services commerciaux : « Perturbation du services IMoD et recharges »,
+    # « Pas de saisie possible (eSIM, revendeurs et CSNO) »
+    if "imod" in t:
+        found.add("IMOD")
+    if "recharge" in t:
+        found.add("RECHARGES")
+    if "esim" in t:
+        found.add("ESIM")
+    if "revendeur" in t:
+        found.add("REVENDEURS")
+    if "csno" in t:
+        found.add("CSNO")
     if not found and "latence" in t:
         # « Augmentation de la latence (20ms) » : dégradation de l'accès Internet
         found |= {"INTERNET_FIXE", "INTERNET_MOBILE"}
