@@ -173,6 +173,22 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Tiga": "MARE",
     "Receiving": "NOUMEA",
     "Motor-Pool": "NOUMEA",
+    "Logicoop": "NOUMEA",
+    "Tindu": "NOUMEA",
+    "ZI de Ducos": "NOUMEA",
+    "Penelo": "MARE",
+    "Pénélo": "MARE",
+    "La Crouen": "CANALA",
+    "Nanon Kénérou": "CANALA",
+    "Nanon-Kénérou": "CANALA",
+    "Ema": "CANALA",
+    "Emma": "CANALA",
+    "mine de Méa": "KOUAOUA",
+    "Méa": "KOUAOUA",
+    "Ile des Pins": "ILE DES PINS",
+    "Île des Pins": "ILE DES PINS",
+    "Baie de la Corbeille": "ILE DES PINS",
+    "Kuto": "ILE DES PINS",
 }
 
 MONTHS = {
@@ -315,7 +331,9 @@ def _split_zones(zones_str: str) -> list[str]:
             depth -= 1
             chars.append(c)
         elif depth == 0 and zones_str[i : i + 4] == " et ":
-            chars.append(",")
+            # « route entre Kuto et l'aérodrome » : le « et » appartient à la zone
+            segment = "".join(chars).rsplit(",", 1)[-1]
+            chars.append(" et " if re.search(r"\bentre\s", segment) else ",")
             i += 3
         else:
             chars.append(c)
@@ -354,6 +372,14 @@ def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
                 if commune:
                     break
         if commune is None:
+            # Tronçon entre deux lieux : « route entre Kuto et l'aérodrome » -> "Kuto"
+            between = re.search(r"\bentre\s+(.+?)\s+et\s+(.+)$", z)
+            if between:
+                for part in between.groups():
+                    commune = ZONE_TO_COMMUNE.get(part.strip())
+                    if commune:
+                        break
+        if commune is None:
             unknown.append(z)
         elif commune not in communes:
             communes.append(commune)
@@ -378,6 +404,8 @@ _SERVICE_ORDER = [
     "ESIM",
     "REVENDEURS",
     "CSNO",
+    "NUMEROS_COURTS",
+    "APPLICATION_HELIA_NC",
 ]
 
 
@@ -414,6 +442,11 @@ def _extract_services(text: str) -> list[str]:
         found.add("REVENDEURS")
     if "csno" in t:
         found.add("CSNO")
+    # « Suspension des numéros courts et indisponibilité de l'application Helia NC »
+    if "numéros courts" in t or "numeros courts" in t:
+        found.add("NUMEROS_COURTS")
+    if re.search(r"appli(?:cation)?\s+helia", t):
+        found.add("APPLICATION_HELIA_NC")
     if not found and "latence" in t:
         # « Augmentation de la latence (20ms) » : dégradation de l'accès Internet
         found |= {"INTERNET_FIXE", "INTERNET_MOBILE"}

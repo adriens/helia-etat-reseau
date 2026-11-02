@@ -136,6 +136,8 @@ class TestEnums:
             "ESIM",
             "REVENDEURS",
             "CSNO",
+            "NUMEROS_COURTS",
+            "APPLICATION_HELIA_NC",
         }
         assert {s.value for s in Service} >= expected
 

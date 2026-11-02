@@ -51,6 +51,11 @@ class TestSplitZones:
         result = _split_zones("NOUMEA\xa0, DUMBEA")
         assert result == ["NOUMEA", "DUMBEA"]
 
+    def test_entre_et_not_split(self):
+        """Le « et » d'un tronçon « entre X et Y » ne sépare pas deux zones."""
+        result = _split_zones("Baie de la Corbeille, route entre Kuto et l'aérodrome")
+        assert result == ["Baie de la Corbeille", "route entre Kuto et l'aérodrome"]
+
 
 # ── _zones_to_communes ────────────────────────────────────────────────────────
 
@@ -92,6 +97,19 @@ class TestZonesToCommunes:
             "NOUMEA",
         ]
         assert unknown == []
+
+    def test_zones_novembre_2026(self):
+        """Zones apparues sur helia.nc début novembre 2026 (issue #109)."""
+        cases = [
+            (["Logicoop", "Tindu", "ZI de Ducos"], ["NOUMEA"]),
+            (["Penelo"], ["MARE"]),
+            (["La Crouen", "Nanon Kénérou", "Ema", "mine de Méa"], ["CANALA", "KOUAOUA"]),
+            (["Baie de la Corbeille", "route entre Kuto et l'aérodrome"], ["ILE DES PINS"]),
+        ]
+        for zones, expected in cases:
+            communes, unknown = _zones_to_communes(zones)
+            assert communes == expected
+            assert unknown == []
 
     def test_genuinely_unknown_zone(self):
         communes, unknown = _zones_to_communes(["ZoneInexistante"])
@@ -147,6 +165,10 @@ class TestExtractServices:
     )
     def test_commercial_services(self, text, expected):
         assert _extract_services(text) == expected
+
+    def test_numeros_courts_et_application(self):
+        text = "Suspension des numéros courts et indisponibilité de l'application Helia NC"
+        assert _extract_services(text) == ["NUMEROS_COURTS", "APPLICATION_HELIA_NC"]
 
     def test_latence_maps_to_internet(self):
         assert _extract_services("Augmentation de la latence (20ms)") == [

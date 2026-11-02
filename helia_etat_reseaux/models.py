@@ -85,6 +85,8 @@ class Service(StrEnum):
     ESIM = "ESIM"
     REVENDEURS = "REVENDEURS"
     CSNO = "CSNO"
+    NUMEROS_COURTS = "NUMEROS_COURTS"
+    APPLICATION_HELIA_NC = "APPLICATION_HELIA_NC"
 
     @classmethod
     def __get_pydantic_json_schema__(cls, schema: CoreSchema, handler: Any) -> JsonSchemaValue:
@@ -103,6 +105,8 @@ class Service(StrEnum):
             "ESIM": "Saisie / activation des eSIM",
             "REVENDEURS": "Saisie côté revendeurs",
             "CSNO": "Saisie côté CSNO",
+            "NUMEROS_COURTS": "Numéros courts (services spéciaux)",
+            "APPLICATION_HELIA_NC": "Application mobile Helia NC",
         }
         return js
 
