@@ -59,7 +59,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Kafeate": "MONT-DORE",
     "Nouméa": "NOUMEA",
     "Nouméa (Val Plaisance, Anse-Vata)": "NOUMEA",
-    "Boulari": "NOUMEA",
+    "Boulari": "MONT-DORE",
     "Robinson": "NOUMEA",
     "Cassis": "NOUMEA",
     "Le Cap": "NOUMEA",
@@ -189,7 +189,40 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Île des Pins": "ILE DES PINS",
     "Baie de la Corbeille": "ILE DES PINS",
     "Kuto": "ILE DES PINS",
+    "ZI Ducos": "NOUMEA",
+    "Baie des citrons": "NOUMEA",
+    "Baie des Citrons": "NOUMEA",
+    "Marina du CNC": "NOUMEA",
+    "Îlot Maître": "NOUMEA",
+    "Ilot Maître": "NOUMEA",
+    "Port Autonome": "NOUMEA",
+    "Petite Rade": "NOUMEA",
+    "Anse du Tir": "NOUMEA",
+    "Hôtel le Méridien": "NOUMEA",
+    "Pointe Magnin": "NOUMEA",
+    "Château Royal": "NOUMEA",
+    "Faubourg Blanchot": "NOUMEA",
+    "Trianon": "NOUMEA",
+    "Quartier Latin": "NOUMEA",
+    "Place Bir Hakeim": "NOUMEA",
+    "Golf de Tina": "NOUMEA",
+    "Gold de Tina": "NOUMEA",
+    "baie de Tina": "NOUMEA",
+    "Baie de Tina": "NOUMEA",
+    "Vallée de Hienghène": "HIENGHENE",
+    "Koulnoué": "HIENGHENE",
+    "Hôtel Koulnoué Village": "HIENGHENE",
+    "Pindache": "HIENGHENE",
+    "Lindéralique": "HIENGHENE",
+    "Tendo": "HIENGHENE",
+    "routes de Tendo": "HIENGHENE",
+    "Tiendanite": "HIENGHENE",
+    "Nessakouya": "PONERIHOUEN",
 }
+
+# Libellés génériques sans commune propre (« Koulnoué, Village, Pindache ») :
+# ignorés sans être signalés comme zones inconnues
+GENERIC_ZONES = {"Village"}
 
 MONTHS = {
     "janvier": 1,
@@ -354,6 +387,8 @@ def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
     communes: list[str] = []
     unknown: list[str] = []
     for z in zones:
+        if z in GENERIC_ZONES:
+            continue
         commune = ZONE_TO_COMMUNE.get(z)
         if commune is None:
             # Retente sans le suffixe parenthésé : "Koutio (Rue Becquerel)" -> "Koutio"
@@ -447,6 +482,10 @@ def _extract_services(text: str) -> list[str]:
         found.add("NUMEROS_COURTS")
     if re.search(r"appli(?:cation)?\s+helia", t):
         found.add("APPLICATION_HELIA_NC")
+    # « Coupure des services 4G » : seul l'accès data mobile est coupé,
+    # la voix bascule sur les autres générations de réseau
+    if not found and re.search(r"\b[2-5]g\b", t):
+        found.add("INTERNET_MOBILE")
     if not found and "latence" in t:
         # « Augmentation de la latence (20ms) » : dégradation de l'accès Internet
         found |= {"INTERNET_FIXE", "INTERNET_MOBILE"}
