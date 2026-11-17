@@ -176,6 +176,10 @@ class TestExtractServices:
             "INTERNET_MOBILE",
         ]
 
+    @pytest.mark.parametrize("text", ["Coupure des services 4G", "Coupure des services 3G"])
+    def test_generation_reseau_maps_to_internet_mobile(self, text):
+        assert _extract_services(text) == ["INTERNET_MOBILE"]
+
 
 # ── _parse_date_range ─────────────────────────────────────────────────────────
 
@@ -244,6 +248,23 @@ class TestZonesParenthesees:
         communes, unknown = _zones_to_communes(["Zorglub (Zorglubville)"])
         assert communes == []
         assert unknown == ["Zorglub (Zorglubville)"]
+
+    def test_commune_before_paren_details(self):
+        """'Mont-Dore (Boulari, …)' — Boulari est au Mont-Dore, pas à Nouméa."""
+        communes, unknown = _zones_to_communes(["Mont-Dore (Boulari, Complexe Boewa)", "Boulari"])
+        assert communes == ["MONT-DORE"]
+        assert unknown == []
+
+
+class TestZonesGeneriques:
+    def test_generic_zone_is_skipped(self):
+        """« Koulnoué, Village, Pindache » : « Village » seul n'est pas une zone inconnue."""
+        communes, unknown = _zones_to_communes(["Koulnoué", "Village", "Pindache"])
+        assert communes == ["HIENGHENE"]
+        assert unknown == []
+
+    def test_generic_zone_alone_yields_no_commune(self):
+        assert _zones_to_communes(["Village"]) == ([], [])
 
 
 class TestInferYear:

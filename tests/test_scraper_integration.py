@@ -1,5 +1,7 @@
 """Tests d'intégration — réseau réel. Exécutés uniquement avec --run-integration."""
 
+import logging
+
 import pytest
 
 from helia_etat_reseaux import scrape_maintenances
@@ -47,4 +49,14 @@ class TestScraperLive:
         assert not unknowns, (
             "Zones inconnues détectées — mettre à jour ZONE_TO_COMMUNE dans scraper.py :\n"
             + "\n".join(f"  [{mid}] {zones}" for mid, zones in unknowns)
+        )
+
+    @pytest.mark.integration
+    def test_no_skipped_items(self, caplog):
+        """Aucun item de la page ne doit être ignoré faute de parsing (zone ou service)."""
+        with caplog.at_level(logging.WARNING, logger="helia_etat_reseaux.scraper"):
+            scrape_maintenances()
+        skipped = [r.getMessage() for r in caplog.records if "Item ignoré" in r.getMessage()]
+        assert not skipped, "Items ignorés au parsing :\n" + "\n".join(
+            f"  {msg}" for msg in skipped
         )
