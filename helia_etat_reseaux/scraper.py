@@ -218,11 +218,18 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "routes de Tendo": "HIENGHENE",
     "Tiendanite": "HIENGHENE",
     "Nessakouya": "PONERIHOUEN",
+    "Teganpaik": "TOUHO",
+    "Téganpaïk": "TOUHO",
+    "Tewade": "TOUHO",
+    "Tewadé": "TOUHO",
+    "Tiouandé": "TOUHO",
+    "Saint Louis": "MONT-DORE",
+    "Saint-Louis": "MONT-DORE",
 }
 
 # Libellés génériques sans commune propre (« Koulnoué, Village, Pindache ») :
 # ignorés sans être signalés comme zones inconnues
-GENERIC_ZONES = {"Village"}
+GENERIC_ZONES = {"Village", "Tribus"}
 
 MONTHS = {
     "janvier": 1,
@@ -414,6 +421,11 @@ def _zones_to_communes(zones: list[str]) -> tuple[list[str], list[str]]:
                     commune = ZONE_TO_COMMUNE.get(part.strip())
                     if commune:
                         break
+        if commune is None:
+            # « environs de Teganpaik » -> "Teganpaik"
+            near = re.match(r"(?:les\s+)?(?:environs|alentours)\s+(?:de\s+|d')(.+)$", z, re.I)
+            if near:
+                commune = ZONE_TO_COMMUNE.get(near.group(1).strip())
         if commune is None:
             unknown.append(z)
         elif commune not in communes:

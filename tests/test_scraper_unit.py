@@ -111,6 +111,14 @@ class TestZonesToCommunes:
             assert communes == expected
             assert unknown == []
 
+    def test_zones_teganpaik(self):
+        """« Tribus et environs de Teganpaik, Saint Louis, Tewade » (issues #117, #118)."""
+        zones = _split_zones("Tribus et environs de Teganpaik, Saint Louis, Tewade")
+        assert zones == ["Tribus", "environs de Teganpaik", "Saint Louis", "Tewade"]
+        communes, unknown = _zones_to_communes(zones)
+        assert communes == ["TOUHO", "MONT-DORE"]
+        assert unknown == []
+
     def test_genuinely_unknown_zone(self):
         communes, unknown = _zones_to_communes(["ZoneInexistante"])
         assert communes == []
