@@ -199,6 +199,7 @@ ZONE_TO_COMMUNE: dict[str, str] = {
     "Petite Rade": "NOUMEA",
     "Anse du Tir": "NOUMEA",
     "Hôtel le Méridien": "NOUMEA",
+    "Hôtel Le Méridien": "NOUMEA",
     "Pointe Magnin": "NOUMEA",
     "Château Royal": "NOUMEA",
     "Faubourg Blanchot": "NOUMEA",
@@ -368,8 +369,10 @@ def _split_zones(zones_str: str) -> list[str]:
             depth += 1
             chars.append(c)
         elif c == ")":
-            depth -= 1
-            chars.append(c)
+            # Parenthèse fermante orpheline (coquille helia.nc) : ignorée
+            if depth > 0:
+                depth -= 1
+                chars.append(c)
         elif depth == 0 and zones_str[i : i + 4] == " et ":
             # « route entre Kuto et l'aérodrome » : le « et » appartient à la zone
             segment = "".join(chars).rsplit(",", 1)[-1]
