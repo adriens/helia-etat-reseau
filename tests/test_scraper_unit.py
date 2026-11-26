@@ -43,6 +43,11 @@ class TestSplitZones:
         assert any("Val Plaisance" in z for z in result)
         assert any("Dumbea" in z for z in result)
 
+    def test_orphan_closing_paren(self):
+        """Une « ) » orpheline ne doit pas empêcher le split sur les virgules."""
+        result = _split_zones("Hôtel Le Méridien, Pointe Magnin, Château Royal)")
+        assert result == ["Hôtel Le Méridien", "Pointe Magnin", "Château Royal"]
+
     def test_strips_whitespace(self):
         result = _split_zones("  NOUMEA  ,  DUMBEA  ")
         assert result == ["NOUMEA", "DUMBEA"]
@@ -70,6 +75,12 @@ class TestZonesToCommunes:
         """Un suffixe parenthésé (rue/tribu) ne doit pas empêcher la reconnaissance."""
         communes, unknown = _zones_to_communes(["Koutio (Rue Becquerel)"])
         assert communes == ["DUMBEA"]
+        assert unknown == []
+
+    def test_meridien_pointe_magnin(self):
+        zones = _split_zones("Hôtel Le Méridien, Pointe Magnin, Château Royal)")
+        communes, unknown = _zones_to_communes(zones)
+        assert communes == ["NOUMEA"]
         assert unknown == []
 
     def test_parenthetical_commune(self):
